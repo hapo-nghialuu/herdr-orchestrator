@@ -1,0 +1,4 @@
+interface:
+  display_name: "Herdr Orchestrator"
+  short_description: "Coordinate Codex, Claude, and Grok through Herdr"
+  default_prompt: "Use $herdr-orchestrator to delegate this task across Codex, Claude, or Grok coding agents and manage their work on my behalf."

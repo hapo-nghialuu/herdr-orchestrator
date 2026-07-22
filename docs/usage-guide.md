@@ -1,0 +1,164 @@
+# Usage Guide
+
+This guide focuses on how to request and steer work. The controller owns the
+Herdr commands, worker lifecycle, integration, and evidence collection.
+
+## Request template
+
+Provide the outcome, work context, constraints, and proof requirements:
+
+```text
+Use Herdr and the herdr-orchestrator skill to <concrete outcome>.
+
+Work context: <repository path or project name>
+Requirements:
+- <observable behavior>
+- <compatibility or scope boundary>
+
+Execution constraints:
+- Read repository instructions before editing.
+- Preserve unrelated changes.
+- Do not commit, merge, push, publish, or clean up unless explicitly requested.
+
+Verification:
+- Run <compile/lint/test commands, if known>.
+- Use an independent read-only reviewer for material changes.
+- Return changed files, command results, warnings, and unresolved questions.
+```
+
+You do not need to specify every worker. Explicit routing is useful only when a
+particular CLI, model, or independent perspective is a real requirement.
+
+## Pattern 1: Small implementation
+
+Keep one writer and one optional reviewer:
+
+```text
+Use Herdr to implement password-reset rate limiting.
+
+Use one implementation writer. After tests pass, use one independent read-only
+reviewer. Do not create parallel writers because the route and its tests share
+files. Do not commit or push.
+```
+
+Expected sequence:
+
+```text
+Inspect → Implement → Test → Review → Final verification
+```
+
+## Pattern 2: Explicit heterogeneous team
+
+```text
+Use Herdr to implement the API change.
+
+- Use Codex for implementation and give it ownership of src/api/**.
+- Use Grok for tests and give it ownership only of tests/api/**.
+- Use Claude as a read-only final reviewer.
+- Run implementation and tests sequentially if the tests depend on unfinished
+  interfaces.
+- Do not let any worker start more coding agents.
+```
+
+The controller must verify each requested CLI exists. It must not silently
+replace a user-selected kind.
+
+## Pattern 3: Parallel independent tasks
+
+```text
+Use Herdr to handle two independent changes in parallel.
+
+Workstream A owns packages/parser/**.
+Workstream B owns packages/renderer/**.
+The integration owner alone owns package manifests and lockfiles.
+Use separate worktrees if checkout isolation is required. Inspect both diffs,
+integrate through one owner, then run the complete repository test suite.
+```
+
+Parallelism is inappropriate when both paths need the same file, one consumes
+the unfinished output of the other, or the task is too small to justify extra
+coordination.
+
+## Pattern 4: Feature plus production bug
+
+```text
+Use Herdr to coordinate two workstreams.
+
+Feature work:
+- Use branch feat/<feature> and an isolated worktree.
+- Break the feature into verifiable milestones.
+
+Bug work:
+- Use branch fix/<bug> and an isolated worktree.
+- Reproduce the bug before changing code.
+- Capture the environment, steps, expected behavior, and actual behavior.
+
+If both workstreams need shared core files, pause concurrent writing. Give the
+shared fix to one owner, verify it, then update the dependent feature branch.
+Do not merge or push without explicit approval.
+```
+
+## Model selection
+
+`--kind` chooses the CLI executable; it does not choose the provider model.
+Native model arguments are passed after Herdr's separator:
+
+```bash
+herdr agent start implementation \
+  --kind codex \
+  --pane "$worker_pane" \
+  -- \
+  --model <codex-model>
+```
+
+Equivalent worker starts may use `--kind claude` or `--kind grok` with their
+native model flags. Prefer project defaults when a repository already governs
+model selection. Avoid hardcoding model IDs in shared documentation unless the
+team intentionally pins them and all users have access.
+
+## Steering a running workflow
+
+Use ordinary direct requests:
+
+```text
+Prioritize the production bug and pause feature implementation.
+```
+
+```text
+Show the reproduction evidence before authorizing a code change.
+```
+
+```text
+The test failed on Ubuntu 24.04 with this output: <relevant evidence>. Re-read
+the affected files, fix only the demonstrated regression, and rerun the test.
+```
+
+```text
+Keep both worktrees for inspection. Do not merge or clean them up.
+```
+
+The controller should redirect an existing worker with new evidence rather than
+restart it or duplicate the original prompt.
+
+## Permission and blocker handling
+
+Workers may encounter prompts requiring credentials, destructive actions,
+publication, or a change in scope. The controller may answer only when the
+user's established instructions already provide that authority. Otherwise it
+must pause the affected path and ask the user.
+
+Independent work may continue when it does not depend on the blocked decision.
+
+## Completion standard
+
+A workflow is complete only when the controller has:
+
+1. Read the settled worker output.
+2. Inspected actual diffs and artifacts.
+3. Confirmed file ownership was respected.
+4. Run fresh relevant validation on the integrated state.
+5. Resolved critical review findings.
+6. Reported failed, skipped, or environment-limited checks.
+
+`idle`, `done`, and confident language are lifecycle signals, not correctness
+evidence.
