@@ -51,7 +51,8 @@ disposable Git repositories outside real projects:
 - rejection of nested or non-Git projects;
 - rejection of conflicting files and unexpected symlinks;
 - correct relative target resolution;
-- rollback of partially created adapters on a failed install.
+- rollback of partially created adapters on a failed install;
+- bulk linking across the workspace with per-project failure reporting.
 
 Extend that script alongside any linker behavior change instead of relying on
 manual runs.

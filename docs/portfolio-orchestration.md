@@ -31,8 +31,13 @@ policy file per project under the state root:
 
 ```bash
 mkdir -p ~/.herdr-orc/projects/shop
+cp herdr-orchestrator/templates/policy-template.md \
+  ~/.herdr-orc/projects/shop/policy.md
 "$EDITOR" ~/.herdr-orc/projects/shop/policy.md
 ```
+
+[The policy template](../templates/policy-template.md) is a starting point;
+editing it yourself is what turns it into an authority grant.
 
 Example policy:
 

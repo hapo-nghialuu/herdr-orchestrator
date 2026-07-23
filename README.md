@@ -135,6 +135,12 @@ so the machine-specific symlinks are not committed by accident.
 The operation is idempotent. It rejects non-Git directories, nested projects,
 unexpected adapter targets, unsafe adapter-parent symlinks, and conflicting
 files. If installation fails, links created by that invocation are rolled back.
+
+To link every sibling Git project in one pass:
+
+```bash
+./herdr-orchestrator/scripts/link-all-projects.sh install
+```
 Concurrent hostile mutation of the target checkout is outside the threat model;
 run the linker only against projects you control.
 
@@ -266,9 +272,12 @@ herdr-orchestrator/
 ├── agents/
 │   └── openai.yaml
 ├── scripts/
+│   ├── link-all-projects.sh
 │   ├── link-project.sh
 │   ├── test-link-project.sh
 │   └── validate.sh
+├── templates/
+│   └── policy-template.md
 ├── references/
 │   ├── agent-lifecycle-and-waits.md
 │   ├── delegation-and-direct-user-contract.md
