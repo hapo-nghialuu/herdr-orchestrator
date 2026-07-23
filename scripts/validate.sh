@@ -5,7 +5,7 @@ set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd -- "$repo_dir"
 
-bash -n scripts/link-project.sh scripts/validate.sh
+bash -n scripts/*.sh
 
 python3 - <<'PY'
 from pathlib import Path
@@ -21,6 +21,18 @@ header = frontmatter.group(1)
 for field in ("name", "description"):
     if not re.search(rf"(?m)^{field}:\s*\S", header):
         raise SystemExit(f"SKILL.md: missing non-empty {field}")
+
+name = re.search(r"(?m)^name:\s*(\S+)\s*$", header).group(1)
+if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", name):
+    raise SystemExit(f"SKILL.md: invalid skill name {name!r}")
+
+description = re.search(r"(?m)^description:\s*(.+)$", header).group(1).strip()
+if description.startswith(('"', "'")) and description.endswith(description[0]):
+    description = description[1:-1]
+if len(description) > 1024:
+    raise SystemExit(
+        f"SKILL.md: description is {len(description)} characters; limit is 1024"
+    )
 
 missing = []
 for markdown in sorted(root.rglob("*.md")):

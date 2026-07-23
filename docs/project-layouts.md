@@ -34,6 +34,10 @@ cd engineering-workspace
 - Updates become visible through existing symlinks.
 - Project-specific `.claude/settings.json`, `.codex`, hooks, and local skills
   remain independent.
+- The installer records both adapter paths in each project's local
+  `.git/info/exclude`, so the machine-specific symlinks stay out of commits
+  even when `.claude/skills/` or `.agents/skills/` content is otherwise
+  committed.
 
 ### Constraints
 

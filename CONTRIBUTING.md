@@ -14,14 +14,19 @@ completion.
 
 ## Local validation
 
-Run the repository-local validation entrypoint:
+Run the repository-local validation entrypoints:
 
 ```bash
 ./scripts/validate.sh
+./scripts/test-link-project.sh
 ```
 
-It checks Bash syntax, required skill frontmatter, and local Markdown targets
-without third-party Python packages.
+`validate.sh` checks Bash syntax, required skill frontmatter (including the
+name format and the 1024-character description limit), and local Markdown
+targets without third-party Python packages. `test-link-project.sh` runs the
+linker's behavioral tests inside a disposable temporary workspace. Both run in
+CI (`.github/workflows/validate.yml`) on Ubuntu and macOS for every push and
+pull request.
 
 For a release, also validate with the official Codex `skill-creator` validator
 when it is installed. The validator requires PyYAML; create an isolated
@@ -37,15 +42,19 @@ Set `SKILL_CREATOR_DIR` to the installed `skill-creator` directory documented by
 your Codex installation. The repository does not assume a machine-specific
 global skill path.
 
-For linker changes, test these behaviors in disposable Git repositories outside
-real projects:
+For linker changes, `./scripts/test-link-project.sh` covers these behaviors in
+disposable Git repositories outside real projects:
 
 - successful `install` and `check`;
-- idempotent repeated installation;
+- idempotent repeated installation, including local Git exclude entries;
 - missing adapter detection;
 - rejection of nested or non-Git projects;
 - rejection of conflicting files and unexpected symlinks;
-- correct relative target resolution.
+- correct relative target resolution;
+- rollback of partially created adapters on a failed install.
+
+Extend that script alongside any linker behavior change instead of relying on
+manual runs.
 
 Do not include credentials, personal configuration, or real private repository
 content in fixtures or reports.
