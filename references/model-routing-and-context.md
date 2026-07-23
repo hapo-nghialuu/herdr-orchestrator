@@ -1,8 +1,12 @@
 # Model Routing and Context
 
-Treat `codex`, `claude`, and `grok` as first-class Herdr worker kinds. Choose a
-kind from user intent, local availability, and task fit. Do not claim one kind is
-universally better or assign unverifiable model qualities.
+Select worker kinds from the installed Herdr capability surface. The valid
+`--kind` values are exactly what the installed `herdr agent start --help`
+lists, and a kind is usable only when its CLI is installed and authenticated
+locally. `codex`, `claude`, and `grok` are the documented primary kinds; do not
+treat that list as exhaustive or as a quality ranking. Choose a kind from user
+intent, local availability, and task fit. Do not claim one kind is universally
+better or assign unverifiable model qualities.
 
 ## Respect explicit user choice
 
@@ -14,13 +18,23 @@ universally better or assign unverifiable model qualities.
 - Preserve a user-requested heterogeneous team unless it conflicts with safety,
   task scope, or installed capabilities.
 
-Use only these supported values in modern start commands:
+Discover the valid kinds and confirm local usability before selecting:
+
+```bash
+herdr agent start --help   # authoritative list of --kind values
+command -v codex           # verify the matching local CLI for each candidate kind
+```
+
+Typical primary-kind start commands:
 
 ```bash
 herdr agent start worker_name --kind codex --pane "$worker_pane"
 herdr agent start worker_name --kind claude --pane "$worker_pane"
 herdr agent start worker_name --kind grok --pane "$worker_pane"
 ```
+
+Any other kind listed by installed help is equally valid when its CLI is
+available and the user's request or the task fit supports it.
 
 ## Choose when the user does not
 
@@ -51,7 +65,9 @@ task roles materially improve the result.
   check; kind diversity alone is not verification.
 - Pass explicit interface contracts between implementations, tests, and review.
 - Keep one accountable integration owner across kinds.
-- Do not ask workers to start or coordinate more coding agents.
+- Do not ask workers to start or coordinate more coding agents. The only
+  sanctioned exception is the controller tier defined in
+  [Portfolio hierarchy and tiers](portfolio-hierarchy.md).
 
 Do not create one worker of every kind merely to demonstrate coverage.
 

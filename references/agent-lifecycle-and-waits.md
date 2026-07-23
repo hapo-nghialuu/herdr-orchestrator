@@ -5,17 +5,12 @@ creating or controlling an agent.
 
 ## Confirm the modern command family
 
-Run read-only discovery commands:
+The environment and server gate in `SKILL.md` is the single canonical
+preflight and must already have passed. Do not treat a reachable but
+incompatible server as usable. Then inspect every relevant leaf with read-only
+help commands:
 
 ```bash
-command -v herdr
-command -v jq
-herdr --version
-status_json=$(herdr status --json)
-printf '%s\n' "$status_json" | jq -e \
-  '.server.running == true and .server.compatible == true' >/dev/null
-herdr agent --help
-herdr pane --help
 herdr agent start --help
 herdr agent prompt --help
 herdr agent send-keys --help
@@ -27,11 +22,6 @@ herdr pane split --help
 herdr pane run --help
 herdr pane wait-output --help
 ```
-
-Stop before any control action unless status JSON parses and both
-`.server.running` and `.server.compatible` are exactly `true`. On failure,
-surface the client and server versions without restarting or updating Herdr.
-Do not treat a reachable but incompatible server as usable.
 
 Use the modern flow only when help confirms all of these forms:
 
@@ -52,7 +42,18 @@ families.
 
 Use explicit pane IDs or unique live agent names. Parse IDs from JSON with
 `jq -e`; never predict an ID from an example, focus, pane order, or sidebar
-position. Use `--current` only for the calling pane.
+position. Use `--current` only for the calling pane. The calling context is
+identified by `HERDR_PANE_ID`, `HERDR_TAB_ID`, and `HERDR_WORKSPACE_ID`; read
+these instead of guessing where the controller is. Workspace, tab, and pane
+IDs are opaque and stable, and a closed ID is never reused. After
+`pane move`, continue with the new pane ID from the move result; an in-flight
+wait on the old pane ends with `agent_not_running`.
+
+Agent state is authoritative only when the matching Herdr integration is
+installed; otherwise it is screen-detected and heuristic. Check
+`herdr integration status` read-only and surface a recommendation to the
+user when an integration is missing. Never install one without user
+authorization.
 
 ## Create, start, and prompt
 
@@ -83,8 +84,12 @@ working, so do not prompt a working agent unless sending an urgent correction.
 For a separate bounded wait, use the confirmed modern wait form:
 
 ```bash
-herdr agent wait api_impl --until idle --timeout 120000
+herdr agent wait api_impl --timeout 120000
 ```
+
+Without `--until`, the wait settles on `idle`, `done`, or `blocked`; do not
+restate those defaults. Pass `--until` only to demand one specific state, and
+request `unknown` explicitly when needed.
 
 After each settled wait, inspect structured state and terminal evidence:
 

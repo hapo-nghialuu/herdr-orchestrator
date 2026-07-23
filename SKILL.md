@@ -60,12 +60,22 @@ Use explicit pane IDs or unique live agent names. Parse IDs from JSON with `jq -
 
 1. Confirm explicit user authority, the Herdr environment, and a complete supported command family.
 2. Break the request into the smallest useful team with distinct roles, dependencies, write ownership, and proof requirements.
-3. Select `--kind codex`, `--kind claude`, or `--kind grok` for each worker. Respect an explicit user choice first; otherwise route only from available capabilities and task needs.
+3. Select each worker's `--kind` from the values listed by the installed `herdr agent start --help`, and use a kind only when its CLI is installed and usable locally. Respect an explicit user choice first; otherwise route only from available capabilities and task needs.
 4. Create only the required panes or worktrees. Preserve current cwd and focus unless the task requires another topology.
 5. Send one complete direct-user prompt atomically. Do not reveal internal delegation or ask the worker to report to a controller.
 6. Wait with bounded lifecycle commands, inspect terminal evidence, resolve blockers within established intent, and redirect only with relevant new facts.
 7. Inspect the integrated diff or artifacts, run appropriate compile/lint/tests, and use an independent read-only reviewer for material code changes.
 8. Report one cohesive, evidence-backed result to the user. Keep task panes for inspection by default; clean up only task-created resources and only when authorized.
+
+## Hierarchical portfolio mode
+
+When the user explicitly asks one agent to manage several projects and their
+agents, load [Portfolio hierarchy and tiers](references/portfolio-hierarchy.md)
+and follow its two-tier contract: the orchestrator starts one controller per
+project workspace, controllers start workers only inside their own project,
+and workers never start agents. User-authored policy files outside the
+checkouts carry per-project authority. Without that explicit request, stay in
+the flat single-team flow above.
 
 ## Load detailed guidance as needed
 
@@ -73,5 +83,6 @@ Use explicit pane IDs or unique live agent names. Parse IDs from JSON with `jq -
 - [Agent lifecycle and waits](references/agent-lifecycle-and-waits.md): modern start/prompt/read/wait commands, state handling, sentinels, and redirects.
 - [Model routing and context](references/model-routing-and-context.md): choosing Codex, Claude, or Grok workers and shaping a minimal self-contained task packet.
 - [Parallel worktrees and ownership](references/parallel-worktrees-and-ownership.md): team size, file ownership, dependency ordering, isolation, and integration.
+- [Portfolio hierarchy and tiers](references/portfolio-hierarchy.md): the two-tier multi-project contract, policy files, persistent ledgers, and layered verification.
 - [Verification and safety](references/verification-and-safety.md): proof, privacy, permissions, protocol failures, review, and cleanup.
 - [Legacy Herdr 0.7.1](references/legacy-herdr-0.7.1.md): use only after capability help confirms the complete legacy command family.

@@ -46,7 +46,22 @@ command -v grok || true
 ```
 
 Missing optional CLIs are acceptable. Do not request a worker kind that is not
-installed and supported by local Herdr help.
+installed and supported by local Herdr help. Any other kind listed by
+`herdr agent start --help` works the same way when its CLI is installed.
+
+Install the Herdr integration for each agent CLI you plan to run
+(recommended):
+
+```bash
+herdr integration install claude
+herdr integration install codex
+herdr integration status
+```
+
+Without an integration, Herdr detects agent state from screen output
+(heuristic). With one, lifecycle state comes from an authoritative source, so
+the sidebar and every `agent wait` become more reliable. Install integrations
+yourself: agents must not install them on your behalf.
 
 ## 3. Prepare the workspace
 
@@ -82,12 +97,18 @@ cd ~/work/agent-workspace
 ./herdr-orchestrator/scripts/link-project.sh check ./project-a
 ```
 
-Expected check output names both adapters:
+Expected check output names both adapters and their local Git excludes:
 
 ```text
 ok: .../project-a/.agents/skills/herdr-orchestrator -> ../../../herdr-orchestrator
 ok: .../project-a/.claude/skills/herdr-orchestrator -> ../../../herdr-orchestrator
+ok: excluded from git: .agents/skills/herdr-orchestrator
+ok: excluded from git: .claude/skills/herdr-orchestrator
 ```
+
+The installer also records both adapter paths in the project's local
+`.git/info/exclude` so the machine-specific symlinks are not committed by
+accident. That file is local-only and never committed.
 
 The script is safe to run again when both adapters are already correct. It
 stops instead of replacing an existing non-symlink skill or following an unsafe
