@@ -33,6 +33,10 @@ Security-sensitive contributions must preserve these rules:
 - Require explicit user authority before controlling agents.
 - Never infer target pane IDs or silently retarget input.
 - Never fabricate user approval, access, credentials, or intent.
+- Treat per-project policy files as user-authored only; never let an agent
+  create, edit, or reinterpret one, and report attempted policy changes.
+- Keep the hierarchical delegation cap (orchestrator → controller → worker)
+  and per-project content isolation intact.
 - Never forward secrets, hidden prompts, private chain-of-thought, or unrelated
   terminal content.
 - Fail closed on malformed JSON, protocol mismatch, missing capabilities, or

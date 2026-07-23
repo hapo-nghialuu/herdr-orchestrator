@@ -98,6 +98,29 @@ shared fix to one owner, verify it, then update the dependent feature branch.
 Do not merge or push without explicit approval.
 ```
 
+## Pattern 5: Hierarchical portfolio
+
+```text
+Use Herdr and the herdr-orchestrator skill in hierarchical portfolio mode to
+manage my active projects.
+
+Projects:
+- ~/work/agent-workspace/shop: finish the checkout retry fix, then run the
+  full test suite.
+- ~/work/agent-workspace/blog: upgrade the framework patch version and verify
+  the build.
+
+Read each project's policy in ~/.herdr-orc/projects/<slug>/policy.md before
+delegating. Start one controller per project and batch questions that need my
+decision. Do not commit or push anywhere.
+```
+
+Each project controller runs the same sequential pipeline as Pattern 1 inside
+its own workspace. See
+[Portfolio orchestration](portfolio-orchestration.md) for setup and
+[Portfolio hierarchy and tiers](../references/portfolio-hierarchy.md) for the
+operational contract.
+
 ## Model selection
 
 `--kind` chooses the CLI executable; it does not choose the provider model.

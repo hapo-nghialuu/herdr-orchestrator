@@ -22,6 +22,8 @@ OpenAI, Anthropic, or xAI.
 - Starts and addresses supported coding-agent CLIs in Herdr panes.
 - Routes work by role, dependency, file ownership, and available capability.
 - Supports sequential pipelines and isolated parallel worktrees.
+- Offers an optional hierarchical portfolio mode: one orchestrator, one
+  controller per project, and a strict two-level delegation cap.
 - Preserves direct user-to-agent conversation semantics.
 - Requires artifact, test, and review evidence before reporting success.
 - Fails closed on incompatible Herdr client/server protocols or unknown command
@@ -126,6 +128,9 @@ project-a/.agents/skills/herdr-orchestrator
 project-a/.claude/skills/herdr-orchestrator
   -> ../../../herdr-orchestrator
 ```
+
+Both adapter paths are also added to the project's local `.git/info/exclude`
+so the machine-specific symlinks are not committed by accident.
 
 The operation is idempotent. It rejects non-Git directories, nested projects,
 unexpected adapter targets, unsafe adapter-parent symlinks, and conflicting
@@ -255,10 +260,14 @@ full operational contract.
 ```text
 herdr-orchestrator/
 ├── SKILL.md
+├── .github/
+│   └── workflows/
+│       └── validate.yml
 ├── agents/
 │   └── openai.yaml
 ├── scripts/
 │   ├── link-project.sh
+│   ├── test-link-project.sh
 │   └── validate.sh
 ├── references/
 │   ├── agent-lifecycle-and-waits.md
@@ -266,9 +275,11 @@ herdr-orchestrator/
 │   ├── legacy-herdr-0.7.1.md
 │   ├── model-routing-and-context.md
 │   ├── parallel-worktrees-and-ownership.md
+│   ├── portfolio-hierarchy.md
 │   └── verification-and-safety.md
 └── docs/
     ├── getting-started.md
+    ├── portfolio-orchestration.md
     ├── project-layouts.md
     ├── troubleshooting.md
     └── usage-guide.md
@@ -282,6 +293,7 @@ repository maintainers.
 
 - [Getting started](docs/getting-started.md)
 - [Usage guide and prompt recipes](docs/usage-guide.md)
+- [Portfolio orchestration across projects](docs/portfolio-orchestration.md)
 - [Project layouts and GitHub sharing](docs/project-layouts.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Contributing](CONTRIBUTING.md)

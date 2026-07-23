@@ -14,6 +14,10 @@ Created adapters:
   <project>/.agents/skills/herdr-orchestrator
   <project>/.claude/skills/herdr-orchestrator
 
+Both adapter paths are also added to the project's local Git exclude file
+(.git/info/exclude) so machine-specific symlinks are not committed by
+accident. The exclude file is local-only and never committed.
+
 The project must remain an immediate child of the workspace that contains
 herdr-orchestrator/. Codex project skills belong in .agents/skills; .codex is
 reserved for project configuration. Grok reads the Claude skill adapter, so
@@ -67,6 +71,10 @@ relative_target=../../../herdr-orchestrator
 codex_link=$project_dir/.agents/skills/herdr-orchestrator
 claude_link=$project_dir/.claude/skills/herdr-orchestrator
 links=("$codex_link" "$claude_link")
+exclude_entries=(
+  .agents/skills/herdr-orchestrator
+  .claude/skills/herdr-orchestrator
+)
 created_codex_link=false
 created_claude_link=false
 install_complete=false
@@ -109,6 +117,40 @@ for parent_path in \
   check_safe_parent "$parent_path"
 done
 
+resolve_exclude_file() {
+  local common_dir
+
+  common_dir=$(git -C "$project_dir" rev-parse --git-common-dir) || \
+    fail "cannot resolve git common directory: $project_dir"
+  case $common_dir in
+    /*) ;;
+    *) common_dir=$project_dir/$common_dir ;;
+  esac
+  [[ -d "$common_dir" ]] || fail "git common directory does not exist: $common_dir"
+  common_dir=$(cd -- "$common_dir" && pwd -P)
+  printf '%s\n' "$common_dir/info/exclude"
+}
+
+exclude_entry_present() {
+  local exclude_file=$1
+  local entry=$2
+
+  [[ -f "$exclude_file" ]] && grep -qxF -- "$entry" "$exclude_file"
+}
+
+add_git_excludes() {
+  local exclude_file entry
+
+  exclude_file=$(resolve_exclude_file)
+  mkdir -p -- "$(dirname -- "$exclude_file")"
+  for entry in "${exclude_entries[@]}"; do
+    if ! exclude_entry_present "$exclude_file" "$entry"; then
+      printf '%s\n' "$entry" >> "$exclude_file"
+      printf 'excluded from git: %s\n' "$entry"
+    fi
+  done
+}
+
 validate_adapter() {
   local link_path=$1
   local actual_target
@@ -133,6 +175,12 @@ if [[ "$mode" == check ]]; then
   for link_path in "${links[@]}"; do
     validate_adapter "$link_path" || fail "adapter is missing: $link_path"
     printf 'ok: %s -> %s\n' "$link_path" "$relative_target"
+  done
+  exclude_file=$(resolve_exclude_file)
+  for entry in "${exclude_entries[@]}"; do
+    exclude_entry_present "$exclude_file" "$entry" || \
+      fail "adapter is not excluded from git (re-run install): $entry"
+    printf 'ok: excluded from git: %s\n' "$entry"
   done
   exit 0
 fi
@@ -170,4 +218,5 @@ for link_path in "${links[@]}"; do
   validate_adapter "$link_path" || fail "adapter installation did not complete: $link_path"
 done
 
+add_git_excludes
 install_complete=true
