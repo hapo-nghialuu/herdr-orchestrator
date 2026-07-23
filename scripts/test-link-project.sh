@@ -163,6 +163,15 @@ expect_success 'failed install rolls back the codex adapter' \
 expect_success 'failed install rolls back the claude adapter' \
   test ! -e "$workspace/project-f/.claude/skills/herdr-orchestrator"
 
+# Bulk linking: visits every immediate-child Git project, links clean ones,
+# and exits non-zero because the poisoned projects above still fail.
+expect_rejection 'link-all install reports failures for poisoned projects' \
+  "$workspace/herdr-orchestrator/scripts/link-all-projects.sh" install
+expect_success 'link-all linked the previously unlinked project' \
+  "$linker" check "$workspace/project-b"
+expect_success 'link-all kept existing adapters intact' \
+  adapter_ok "$workspace/project-a/.claude/skills/herdr-orchestrator"
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail_count"
 if (( fail_count > 0 )); then
   printf 'failed: %s\n' "${failures[@]}" >&2
