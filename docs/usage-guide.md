@@ -124,20 +124,30 @@ operational contract.
 ## Model selection
 
 `--kind` chooses the CLI executable; it does not choose the provider model.
-Native model arguments are passed after Herdr's separator:
+Native model arguments are passed after Herdr's `--` separator. Each CLI has
+its own flags — Codex separates the model from reasoning effort, while Grok and
+Claude take a single model flag:
 
 ```bash
-herdr agent start implementation \
-  --kind codex \
-  --pane "$worker_pane" \
-  -- \
-  --model <codex-model>
+herdr agent start planner --kind codex --pane "$p1" \
+  -- -m <codex-model-id> -c model_reasoning_effort=max
+herdr agent start impl --kind grok --pane "$p2" -- -m <grok-model-id>
+herdr agent start reviewer --kind claude --pane "$p3" -- --model <claude-model>
 ```
 
-Equivalent worker starts may use `--kind claude` or `--kind grok` with their
-native model flags. Prefer project defaults when a repository already governs
-model selection. Avoid hardcoding model IDs in shared documentation unless the
-team intentionally pins them and all users have access.
+Name the exact model ID your CLI accepts, not a spoken shorthand. A phrase like
+"codex gpt-5.6 max" is really a model ID (`-m gpt-5.6-sol`) plus a separate
+reasoning setting (`-c model_reasoning_effort=max`); the controller cannot
+reliably guess the split, so give both parts explicitly. If a CLI rejects the
+model, the controller stops and asks you for the correct ID rather than
+substituting another — so a wrong name costs one round trip, not a silent
+downgrade. Find valid IDs with `grok models`, `codex --help`, `claude --help`,
+or your `~/.codex/config.toml`.
+
+Prefer project defaults when a repository already governs model selection;
+omitting the flag lets each CLI use its configured default. Avoid hardcoding
+model IDs in shared documentation unless the team intentionally pins them and
+all users have access.
 
 ## Steering a running workflow
 

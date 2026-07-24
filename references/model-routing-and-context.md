@@ -36,6 +36,45 @@ herdr agent start worker_name --kind grok --pane "$worker_pane"
 Any other kind listed by installed help is equally valid when its CLI is
 available and the user's request or the task fit supports it.
 
+## Pass a requested model through the native argument separator
+
+`--kind` selects the CLI executable, not the provider model. When the user
+names a model, pass it to the CLI after Herdr's `--` separator. Never fold a
+spoken model name into the `--kind` value.
+
+Treat a spoken model name as an approximate label, not a verified ID. The
+exact string the CLI accepts differs from how the user says it (a shorthand
+like "gpt-5.6 max" is usually a model ID plus a separate reasoning-effort
+setting). Resolve the exact ID from the installed CLI before starting:
+
+```bash
+codex --help          # -m/--model and -c key=value overrides
+grep -nE 'model|reason' "${CODEX_HOME:-$HOME/.codex}/config.toml"
+grok models           # authoritative list of usable model IDs
+claude --help         # --model
+```
+
+Each CLI shapes model and reasoning differently. Codex separates the model
+(`-m`) from reasoning effort (`-c model_reasoning_effort=...`); Grok and Claude
+take only a model flag. Match the user's request to the CLI's own scheme
+instead of assuming one flag carries both:
+
+```bash
+herdr agent start planner --kind codex --pane "$p1" \
+  -- -m <codex-model-id> -c model_reasoning_effort=<low|medium|high|max>
+herdr agent start impl --kind grok --pane "$p2" -- -m <grok-model-id>
+herdr agent start reviewer --kind claude --pane "$p3" -- --model <claude-model>
+```
+
+If a CLI rejects the requested model, stop and ask the user for the exact ID.
+Do not silently substitute a different model, downgrade to a default, or retry
+with a guessed name; silent substitution violates the explicit-choice rule
+above. Report the rejection and the CLI's own error verbatim.
+
+When the user gives no model, omit the flag so the CLI uses its configured
+default (for example the `model` and `model_reasoning_effort` already set in
+`config.toml`); do not invent one.
+
 ## Choose when the user does not
 
 Check installed Herdr help and the relevant local executables or integrations.
