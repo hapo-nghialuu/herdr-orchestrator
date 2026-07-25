@@ -6,6 +6,8 @@ repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd -- "$repo_dir"
 
 bash -n scripts/*.sh
+bash -n bin/hod
+sh -n install.sh
 
 python3 - <<'PY'
 from pathlib import Path

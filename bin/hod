@@ -1,0 +1,800 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+HOD_VERSION=0.1.0
+HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/herdr-orchestrator.git}"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  hod install [--project <path>] [--ref <git-ref>]
+  hod status
+  hod doctor
+  hod update
+  hod uninstall [--project <path>] [--purge]
+  hod version
+  hod help
+
+Herdr Orchestrator Driver (hod) — install and manage the herdr-orchestrator skill.
+
+Subcommands:
+  install     Clone-or-update the skill checkout and create adapter symlinks
+              (global by default; --project installs into one Git project)
+  status      Report prerequisites, skill checkout, adapters, and PATH
+  doctor      status plus remediation and deeper health checks
+  update      Fast-forward the skill checkout (refuses local modifications)
+  uninstall   Remove hod-managed adapter symlinks; --purge also removes skill data
+  version     Print the hod version
+  help        Show this help
+
+Environment overrides (for tests and custom layouts):
+  HOD_HOME         default: ~/.hod          (skill lives at $HOD_HOME/skill)
+  HOD_BIN_DIR      default: ~/.local/bin
+  HOD_CLAUDE_DIR   default: ~/.claude
+  HOD_AGENTS_DIR   default: ~/.agents
+  HOD_REPO_URL     default: official GitHub clone URL
+EOF
+}
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+usage_error() {
+  printf 'error: %s\n' "$*" >&2
+  usage >&2
+  exit 2
+}
+
+resolve_paths() {
+  local home_dir
+  home_dir=${HOME:-}
+  [[ -n "$home_dir" ]] || fail "HOME is not set"
+
+  HOD_HOME=${HOD_HOME:-$home_dir/.hod}
+  HOD_BIN_DIR=${HOD_BIN_DIR:-$home_dir/.local/bin}
+  HOD_CLAUDE_DIR=${HOD_CLAUDE_DIR:-$home_dir/.claude}
+  HOD_AGENTS_DIR=${HOD_AGENTS_DIR:-$home_dir/.agents}
+
+  SKILL_DIR=$HOD_HOME/skill
+  # Adapter directory name must match SKILL.md's `name:` field so the skill
+  # resolves identically however it was installed. `hod` names the CLI only.
+  SKILL_ADAPTER_NAME=herdr-orchestrator
+  GLOBAL_CLAUDE_LINK=$HOD_CLAUDE_DIR/skills/$SKILL_ADAPTER_NAME
+  GLOBAL_AGENTS_LINK=$HOD_AGENTS_DIR/skills/$SKILL_ADAPTER_NAME
+  PROJECT_ADAPTER_REL_AGENTS=.agents/skills/$SKILL_ADAPTER_NAME
+  PROJECT_ADAPTER_REL_CLAUDE=.claude/skills/$SKILL_ADAPTER_NAME
+}
+
+abs_path() {
+  local target=$1
+
+  if [[ -d "$target" ]]; then
+    (cd -- "$target" && pwd -P)
+    return
+  fi
+
+  local parent base
+  parent=$(dirname -- "$target")
+  base=$(basename -- "$target")
+  if [[ -d "$parent" ]]; then
+    printf '%s/%s\n' "$(cd -- "$parent" && pwd -P)" "$base"
+  else
+    printf '%s\n' "$target"
+  fi
+}
+
+mark_ok() {
+  printf '✓ %s\n' "$*"
+}
+
+mark_bad() {
+  printf '✗ %s\n' "$*"
+}
+
+skill_commit() {
+  if [[ -d "$SKILL_DIR/.git" ]]; then
+    git -C "$SKILL_DIR" rev-parse --short HEAD 2>/dev/null || true
+  fi
+}
+
+skill_has_local_changes() {
+  [[ -d "$SKILL_DIR/.git" ]] || return 1
+  ! git -C "$SKILL_DIR" diff --quiet 2>/dev/null || \
+    ! git -C "$SKILL_DIR" diff --cached --quiet 2>/dev/null || \
+    [[ -n "$(git -C "$SKILL_DIR" ls-files --others --exclude-standard 2>/dev/null)" ]]
+}
+
+adapter_resolves_to_skill() {
+  local link=$1
+  local resolved
+
+  [[ -L "$link" ]] || return 1
+  [[ -d "$link" ]] || return 1
+  resolved=$(cd -- "$link" && pwd -P)
+  [[ "$resolved" == "$(abs_path "$SKILL_DIR")" ]]
+}
+
+check_safe_parent() {
+  local path=$1
+
+  if [[ -L "$path" ]]; then
+    fail "adapter parent must not be a symlink: $path"
+  fi
+  if [[ -e "$path" && ! -d "$path" ]]; then
+    fail "adapter parent is not a directory: $path"
+  fi
+}
+
+ensure_skill_checkout() {
+  local ref=${1:-}
+  local parent
+
+  parent=$(dirname -- "$SKILL_DIR")
+  mkdir -p -- "$parent"
+
+  if [[ -d "$SKILL_DIR/.git" ]]; then
+    printf 'skill checkout present: %s\n' "$SKILL_DIR"
+    if skill_has_local_changes; then
+      printf 'warning: skill checkout has local modifications; leaving tree unchanged\n' >&2
+    else
+      git -C "$SKILL_DIR" fetch --quiet origin 2>/dev/null || \
+        git -C "$SKILL_DIR" fetch --quiet 2>/dev/null || true
+      if [[ -n "$ref" ]]; then
+        git -C "$SKILL_DIR" checkout --quiet "$ref" || \
+          fail "failed to checkout ref: $ref"
+        printf 'checked out ref: %s\n' "$ref"
+      else
+        if git -C "$SKILL_DIR" pull --ff-only --quiet 2>/dev/null; then
+          printf 'updated skill checkout (ff-only)\n'
+        else
+          printf 'skill checkout left on current commit (ff-only not available)\n'
+        fi
+      fi
+    fi
+  else
+    if [[ -e "$SKILL_DIR" ]]; then
+      fail "skill path exists but is not a git checkout: $SKILL_DIR"
+    fi
+    printf 'cloning %s -> %s\n' "$HOD_REPO_URL" "$SKILL_DIR"
+    git clone --quiet -- "$HOD_REPO_URL" "$SKILL_DIR" || \
+      fail "failed to clone $HOD_REPO_URL"
+    if [[ -n "$ref" ]]; then
+      git -C "$SKILL_DIR" checkout --quiet "$ref" || \
+        fail "failed to checkout ref: $ref"
+      printf 'checked out ref: %s\n' "$ref"
+    fi
+  fi
+
+  [[ -f "$SKILL_DIR/SKILL.md" ]] || fail "SKILL.md missing in $SKILL_DIR"
+}
+
+install_global_adapters() {
+  local skill_abs created_agents=false created_claude=false
+  skill_abs=$(abs_path "$SKILL_DIR")
+
+  for parent_path in \
+    "$HOD_AGENTS_DIR" \
+    "$HOD_AGENTS_DIR/skills" \
+    "$HOD_CLAUDE_DIR" \
+    "$HOD_CLAUDE_DIR/skills"; do
+    check_safe_parent "$parent_path"
+  done
+
+  mkdir -p -- "$HOD_AGENTS_DIR/skills" "$HOD_CLAUDE_DIR/skills"
+
+  rollback_global() {
+    local status=$?
+    if [[ $status -ne 0 ]]; then
+      if [[ "$created_agents" == true && -L "$GLOBAL_AGENTS_LINK" ]]; then
+        rm -- "$GLOBAL_AGENTS_LINK"
+        printf 'rolled back: %s\n' "$GLOBAL_AGENTS_LINK" >&2
+      fi
+      if [[ "$created_claude" == true && -L "$GLOBAL_CLAUDE_LINK" ]]; then
+        rm -- "$GLOBAL_CLAUDE_LINK"
+        printf 'rolled back: %s\n' "$GLOBAL_CLAUDE_LINK" >&2
+      fi
+    fi
+  }
+  trap rollback_global EXIT
+
+  install_one_global() {
+    local link=$1
+    local label=$2
+
+    if [[ -L "$link" ]]; then
+      if adapter_resolves_to_skill "$link"; then
+        printf 'already linked: %s\n' "$link"
+        return 0
+      fi
+      fail "adapter exists but does not resolve to skill checkout: $link"
+    fi
+    if [[ -e "$link" ]]; then
+      fail "adapter path already exists and is not a symlink: $link"
+    fi
+    ln -s -- "$skill_abs" "$link"
+    printf 'linked: %s -> %s\n' "$link" "$skill_abs"
+    if [[ "$label" == agents ]]; then
+      created_agents=true
+    else
+      created_claude=true
+    fi
+  }
+
+  install_one_global "$GLOBAL_AGENTS_LINK" agents
+  install_one_global "$GLOBAL_CLAUDE_LINK" claude
+
+  trap - EXIT
+}
+
+project_is_sibling_of_canonical() {
+  local project_dir=$1
+  local workspace sibling linker
+
+  workspace=$(dirname -- "$project_dir")
+  sibling=$workspace/herdr-orchestrator
+  linker=$sibling/scripts/link-project.sh
+
+  [[ -d "$sibling" ]] || return 1
+  [[ -f "$linker" ]] || return 1
+  [[ -x "$linker" || -f "$linker" ]] || return 1
+  [[ "$(basename -- "$sibling")" == herdr-orchestrator ]] || return 1
+  [[ "$(dirname -- "$project_dir")" == "$(cd -- "$workspace" && pwd -P)" ]] || \
+    [[ "$(dirname -- "$project_dir")" == "$workspace" ]]
+}
+
+install_project_adapters_absolute() {
+  local project_dir=$1
+  local skill_abs
+  local agents_link claude_link
+  local created_agents=false created_claude=false
+  local install_complete=false
+
+  skill_abs=$(abs_path "$SKILL_DIR")
+  agents_link=$project_dir/$PROJECT_ADAPTER_REL_AGENTS
+  claude_link=$project_dir/$PROJECT_ADAPTER_REL_CLAUDE
+
+  [[ -e "$project_dir/.git" ]] || fail "project must contain a .git marker: $project_dir"
+  [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
+  command -v git >/dev/null 2>&1 || fail "git executable is required"
+
+  local git_top
+  git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null) || \
+    fail "project path is not a valid Git worktree: $project_dir"
+  git_top=$(cd -- "$git_top" && pwd -P)
+  [[ "$git_top" == "$project_dir" ]] || \
+    fail "project path must be its Git worktree root: $project_dir"
+
+  for parent_path in \
+    "$project_dir/.agents" \
+    "$project_dir/.agents/skills" \
+    "$project_dir/.claude" \
+    "$project_dir/.claude/skills"; do
+    check_safe_parent "$parent_path"
+  done
+
+  rollback_project() {
+    local status=$?
+    if [[ "$install_complete" != true && $status -ne 0 ]]; then
+      if [[ "$created_agents" == true && -L "$agents_link" ]]; then
+        rm -- "$agents_link"
+        printf 'rolled back: %s\n' "$agents_link" >&2
+      fi
+      if [[ "$created_claude" == true && -L "$claude_link" ]]; then
+        rm -- "$claude_link"
+        printf 'rolled back: %s\n' "$claude_link" >&2
+      fi
+    fi
+  }
+  trap rollback_project EXIT
+
+  install_one_project() {
+    local link=$1
+    local flag_name=$2
+
+    if [[ -L "$link" ]]; then
+      if [[ -d "$link" ]] && [[ "$(cd -- "$link" && pwd -P)" == "$skill_abs" ]]; then
+        printf 'already linked: %s\n' "$link"
+        return 0
+      fi
+      fail "adapter exists but does not resolve to skill checkout: $link"
+    fi
+    if [[ -e "$link" ]]; then
+      fail "adapter path already exists and is not a symlink: $link"
+    fi
+    mkdir -p -- "$(dirname -- "$link")"
+    check_safe_parent "$(dirname -- "$link")"
+    ln -s -- "$skill_abs" "$link"
+    printf 'linked: %s -> %s\n' "$link" "$skill_abs"
+    if [[ "$flag_name" == agents ]]; then
+      created_agents=true
+    else
+      created_claude=true
+    fi
+  }
+
+  install_one_project "$agents_link" agents
+  install_one_project "$claude_link" claude
+
+  # Add both adapter paths to .git/info/exclude idempotently.
+  local common_dir exclude_file entry
+  common_dir=$(git -C "$project_dir" rev-parse --git-common-dir) || \
+    fail "cannot resolve git common directory: $project_dir"
+  case $common_dir in
+    /*) ;;
+    *) common_dir=$project_dir/$common_dir ;;
+  esac
+  [[ -d "$common_dir" ]] || fail "git common directory does not exist: $common_dir"
+  common_dir=$(cd -- "$common_dir" && pwd -P)
+  exclude_file=$common_dir/info/exclude
+  mkdir -p -- "$(dirname -- "$exclude_file")"
+  for entry in "$PROJECT_ADAPTER_REL_AGENTS" "$PROJECT_ADAPTER_REL_CLAUDE"; do
+    if [[ -f "$exclude_file" ]] && grep -qxF -- "$entry" "$exclude_file"; then
+      continue
+    fi
+    printf '%s\n' "$entry" >> "$exclude_file"
+    printf 'excluded from git: %s\n' "$entry"
+  done
+
+  install_complete=true
+  trap - EXIT
+}
+
+cmd_install() {
+  local project_path="" ref=""
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --project)
+        [[ $# -ge 2 ]] || usage_error "--project requires a path"
+        project_path=$2
+        shift 2
+        ;;
+      --ref)
+        [[ $# -ge 2 ]] || usage_error "--ref requires a git ref"
+        ref=$2
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        usage_error "unknown install option: $1"
+        ;;
+    esac
+  done
+
+  command -v git >/dev/null 2>&1 || fail "git is required for install"
+  ensure_skill_checkout "$ref"
+
+  if [[ -n "$project_path" ]]; then
+    [[ -d "$project_path" ]] || fail "project path is not an existing directory: $project_path"
+    local project_dir
+    project_dir=$(cd -- "$project_path" && pwd -P)
+
+    if project_is_sibling_of_canonical "$project_dir"; then
+      local workspace linker
+      workspace=$(dirname -- "$project_dir")
+      linker=$workspace/herdr-orchestrator/scripts/link-project.sh
+      printf 'using sibling link-project.sh for relative adapters\n'
+      bash -- "$linker" install "$project_dir"
+    else
+      printf 'installing absolute adapters into project: %s\n' "$project_dir"
+      install_project_adapters_absolute "$project_dir"
+    fi
+  else
+    install_global_adapters
+  fi
+
+  # Ensure the executable is available when we have a skill checkout.
+  if [[ -f "$SKILL_DIR/bin/hod" ]]; then
+    mkdir -p -- "$HOD_BIN_DIR"
+    if [[ -L "$HOD_BIN_DIR/hod" || ! -e "$HOD_BIN_DIR/hod" ]]; then
+      ln -sfn -- "$SKILL_DIR/bin/hod" "$HOD_BIN_DIR/hod"
+      chmod +x -- "$SKILL_DIR/bin/hod" 2>/dev/null || true
+      printf 'installed executable: %s -> %s\n' "$HOD_BIN_DIR/hod" "$SKILL_DIR/bin/hod"
+    elif [[ -f "$HOD_BIN_DIR/hod" ]]; then
+      # Replace plain file copy with current skill binary when identical path type.
+      cp -- "$SKILL_DIR/bin/hod" "$HOD_BIN_DIR/hod"
+      chmod +x -- "$HOD_BIN_DIR/hod"
+      printf 'updated executable: %s\n' "$HOD_BIN_DIR/hod"
+    fi
+
+    case ":${PATH:-}:" in
+      *":$HOD_BIN_DIR:"*) ;;
+      *)
+        printf 'warning: %s is not on PATH. Add this line to your shell profile:\n' "$HOD_BIN_DIR" >&2
+        printf '  export PATH="%s:$PATH"\n' "$HOD_BIN_DIR" >&2
+        ;;
+    esac
+  fi
+
+  local commit
+  commit=$(skill_commit)
+  printf 'install complete'
+  if [[ -n "$commit" ]]; then
+    printf ' (skill %s)' "$commit"
+  fi
+  printf '\n'
+}
+
+report_cmd_presence() {
+  local name=$1
+  local required=${2:-false}
+  local path version_line
+
+  if path=$(command -v "$name" 2>/dev/null); then
+    version_line=$("$name" --version 2>/dev/null | head -n 1 || true)
+    if [[ -n "$version_line" ]]; then
+      mark_ok "$name: $version_line ($path)"
+    else
+      mark_ok "$name: present ($path)"
+    fi
+    return 0
+  fi
+  mark_bad "$name: not found"
+  [[ "$required" == true ]] && return 1
+  return 0
+}
+
+path_has_bin_dir() {
+  case ":${PATH:-}:" in
+    *":$HOD_BIN_DIR:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+cmd_status() {
+  local ok=true
+  local commit agents_ok=false
+
+  report_cmd_presence herdr true || ok=false
+  report_cmd_presence git true || ok=false
+  report_cmd_presence jq true || ok=false
+
+  if command -v claude >/dev/null 2>&1 || \
+     command -v codex >/dev/null 2>&1 || \
+     command -v grok >/dev/null 2>&1; then
+    agents_ok=true
+  fi
+  report_cmd_presence claude false || true
+  report_cmd_presence codex false || true
+  report_cmd_presence grok false || true
+  if [[ "$agents_ok" != true ]]; then
+    mark_bad "agent CLIs: none of claude/codex/grok found"
+    ok=false
+  else
+    mark_ok "agent CLIs: at least one present"
+  fi
+
+  if [[ -d "$SKILL_DIR/.git" ]]; then
+    commit=$(skill_commit)
+    mark_ok "skill checkout: $SKILL_DIR (commit ${commit:-unknown})"
+  else
+    mark_bad "skill checkout: missing ($SKILL_DIR)"
+    ok=false
+  fi
+
+  if adapter_resolves_to_skill "$GLOBAL_AGENTS_LINK"; then
+    mark_ok "global agents adapter: $GLOBAL_AGENTS_LINK"
+  else
+    mark_bad "global agents adapter: missing or broken ($GLOBAL_AGENTS_LINK)"
+    ok=false
+  fi
+
+  if adapter_resolves_to_skill "$GLOBAL_CLAUDE_LINK"; then
+    mark_ok "global claude adapter: $GLOBAL_CLAUDE_LINK"
+  else
+    mark_bad "global claude adapter: missing or broken ($GLOBAL_CLAUDE_LINK)"
+    ok=false
+  fi
+
+  if path_has_bin_dir; then
+    mark_ok "PATH includes $HOD_BIN_DIR"
+  else
+    mark_bad "PATH missing $HOD_BIN_DIR"
+    ok=false
+  fi
+
+  if [[ "$ok" == true ]]; then
+    exit 0
+  fi
+  exit 1
+}
+
+remediate() {
+  printf '  → %s\n' "$*"
+}
+
+inspect_adapter() {
+  local link=$1
+  local label=$2
+  local skill_abs resolved target
+
+  skill_abs=$(abs_path "$SKILL_DIR" 2>/dev/null || printf '%s\n' "$SKILL_DIR")
+
+  if [[ ! -e "$link" && ! -L "$link" ]]; then
+    mark_bad "$label: missing ($link)"
+    remediate "hod install"
+    return 1
+  fi
+
+  if [[ -L "$link" ]]; then
+    target=$(readlink "$link")
+    if [[ ! -e "$link" ]]; then
+      mark_bad "$label: dangling symlink ($link -> $target)"
+      remediate "rm -- '$link' && hod install"
+      return 1
+    fi
+    resolved=$(cd -- "$link" && pwd -P)
+    if [[ "$resolved" != "$skill_abs" ]]; then
+      mark_bad "$label: points elsewhere ($link -> $resolved, expected $skill_abs)"
+      remediate "rm -- '$link' && hod install"
+      return 1
+    fi
+    mark_ok "$label: $link -> $skill_abs"
+    return 0
+  fi
+
+  mark_bad "$label: exists but is not a symlink ($link)"
+  remediate "move or remove $link, then run: hod install"
+  return 1
+}
+
+cmd_doctor() {
+  local ok=true
+  local commit
+
+  # Mirror status checks with remediation.
+  if command -v herdr >/dev/null 2>&1; then
+    local herdr_ver
+    herdr_ver=$(herdr --version 2>/dev/null | head -n 1 || true)
+    mark_ok "herdr: ${herdr_ver:-present} ($(command -v herdr))"
+  else
+    mark_bad "herdr: not found"
+    remediate "curl -fsSL https://herdr.dev/install.sh | sh"
+    ok=false
+  fi
+
+  if command -v git >/dev/null 2>&1; then
+    mark_ok "git: $(git --version 2>/dev/null | head -n 1) ($(command -v git))"
+  else
+    mark_bad "git: not found"
+    remediate "install git via your OS package manager"
+    ok=false
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    mark_ok "jq: $(jq --version 2>/dev/null | head -n 1) ($(command -v jq))"
+  else
+    mark_bad "jq: not found"
+    remediate "install jq via your OS package manager"
+    ok=false
+  fi
+
+  local any_agent=false
+  for agent in claude codex grok; do
+    if command -v "$agent" >/dev/null 2>&1; then
+      mark_ok "$agent: present ($(command -v "$agent"))"
+      any_agent=true
+    else
+      mark_bad "$agent: not found"
+      remediate "install and authenticate the $agent CLI if you need that worker kind"
+    fi
+  done
+  if [[ "$any_agent" != true ]]; then
+    ok=false
+  fi
+
+  if [[ -d "$SKILL_DIR/.git" ]]; then
+    commit=$(skill_commit)
+    mark_ok "skill checkout: $SKILL_DIR (commit ${commit:-unknown})"
+    if skill_has_local_changes; then
+      mark_bad "skill checkout has local uncommitted changes"
+      remediate "cd '$SKILL_DIR' && git status"
+      remediate "commit, stash, or discard local changes before 'hod update'"
+      ok=false
+    else
+      mark_ok "skill checkout is clean"
+    fi
+  else
+    mark_bad "skill checkout: missing ($SKILL_DIR)"
+    remediate "hod install"
+    ok=false
+  fi
+
+  inspect_adapter "$GLOBAL_AGENTS_LINK" "global agents adapter" || ok=false
+  inspect_adapter "$GLOBAL_CLAUDE_LINK" "global claude adapter" || ok=false
+
+  if path_has_bin_dir; then
+    mark_ok "PATH includes $HOD_BIN_DIR"
+  else
+    mark_bad "PATH missing $HOD_BIN_DIR"
+    remediate "export PATH=\"$HOD_BIN_DIR:\$PATH\""
+    ok=false
+  fi
+
+  if command -v herdr >/dev/null 2>&1; then
+    if herdr integration status >/dev/null 2>&1; then
+      mark_ok "herdr integration status: reachable (read-only check)"
+      herdr integration status 2>/dev/null | sed 's/^/  /' || true
+    else
+      mark_bad "herdr integration status: unavailable or failed"
+      remediate "run 'herdr integration status' manually; install integrations yourself if needed"
+      # Not a hard failure of hod itself; leave ok as-is unless we want soft.
+    fi
+  fi
+
+  if [[ "$ok" == true ]]; then
+    exit 0
+  fi
+  exit 1
+}
+
+cmd_update() {
+  command -v git >/dev/null 2>&1 || fail "git is required for update"
+  [[ -d "$SKILL_DIR/.git" ]] || fail "skill checkout missing; run: hod install"
+
+  if skill_has_local_changes; then
+    fail "skill checkout has local modifications; refuse to update. Inspect: git -C $SKILL_DIR status"
+  fi
+
+  local old new
+  old=$(git -C "$SKILL_DIR" rev-parse --short HEAD)
+  git -C "$SKILL_DIR" pull --ff-only || \
+    fail "git pull --ff-only failed; resolve manually in $SKILL_DIR"
+  new=$(git -C "$SKILL_DIR" rev-parse --short HEAD)
+  printf 'updated skill: %s → %s\n' "$old" "$new"
+}
+
+remove_if_managed_adapter() {
+  local link=$1
+  local skill_abs
+
+  skill_abs=$(abs_path "$SKILL_DIR" 2>/dev/null || printf '%s\n' "$SKILL_DIR")
+
+  if [[ ! -e "$link" && ! -L "$link" ]]; then
+    printf 'absent: %s\n' "$link"
+    return 0
+  fi
+
+  if [[ ! -L "$link" ]]; then
+    printf 'skipped (not a symlink): %s\n' "$link"
+    return 0
+  fi
+
+  if [[ -d "$link" ]]; then
+    local resolved
+    resolved=$(cd -- "$link" && pwd -P)
+    if [[ "$resolved" == "$skill_abs" ]]; then
+      rm -- "$link"
+      printf 'removed: %s\n' "$link"
+      return 0
+    fi
+  else
+    # Dangling link: remove only if readlink target points under skill path textually
+    # or the absolute skill dir.
+    local target
+    target=$(readlink "$link")
+    case $target in
+      "$skill_abs"|"$SKILL_DIR"|*/skill|*/skill/)
+        rm -- "$link"
+        printf 'removed dangling managed link: %s\n' "$link"
+        return 0
+        ;;
+    esac
+    # Also compare canonicalized parent of target string when absolute.
+    if [[ "$target" == "$skill_abs" || "$target" == "$SKILL_DIR" ]]; then
+      rm -- "$link"
+      printf 'removed dangling managed link: %s\n' "$link"
+      return 0
+    fi
+  fi
+
+  printf 'skipped (does not resolve into skill checkout): %s\n' "$link"
+}
+
+cmd_uninstall() {
+  local project_path="" purge=false
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --project)
+        [[ $# -ge 2 ]] || usage_error "--project requires a path"
+        project_path=$2
+        shift 2
+        ;;
+      --purge)
+        purge=true
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        usage_error "unknown uninstall option: $1"
+        ;;
+    esac
+  done
+
+  if [[ -n "$project_path" ]]; then
+    [[ -d "$project_path" ]] || fail "project path is not an existing directory: $project_path"
+    local project_dir
+    project_dir=$(cd -- "$project_path" && pwd -P)
+    remove_if_managed_adapter "$project_dir/$PROJECT_ADAPTER_REL_AGENTS"
+    remove_if_managed_adapter "$project_dir/$PROJECT_ADAPTER_REL_CLAUDE"
+    printf 'left .git/info/exclude entries alone (harmless)\n'
+  else
+    remove_if_managed_adapter "$GLOBAL_AGENTS_LINK"
+    remove_if_managed_adapter "$GLOBAL_CLAUDE_LINK"
+  fi
+
+  if [[ "$purge" == true ]]; then
+    if [[ -e "$HOD_HOME" ]]; then
+      rm -rf -- "$HOD_HOME"
+      printf 'purged: %s\n' "$HOD_HOME"
+    else
+      printf 'purge: %s already absent\n' "$HOD_HOME"
+    fi
+    # Also remove executable if it points into the purged skill.
+    if [[ -L "$HOD_BIN_DIR/hod" ]]; then
+      local bin_target
+      bin_target=$(readlink "$HOD_BIN_DIR/hod")
+      case $bin_target in
+        "$HOD_HOME"/*|"$SKILL_DIR"/*)
+          rm -- "$HOD_BIN_DIR/hod"
+          printf 'removed executable link: %s\n' "$HOD_BIN_DIR/hod"
+          ;;
+      esac
+    fi
+  fi
+}
+
+cmd_version() {
+  printf 'hod %s\n' "$HOD_VERSION"
+}
+
+main() {
+  resolve_paths
+
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+
+  local cmd=$1
+  shift
+
+  case $cmd in
+    install)
+      cmd_install "$@"
+      ;;
+    status)
+      cmd_status "$@"
+      ;;
+    doctor)
+      cmd_doctor "$@"
+      ;;
+    update)
+      cmd_update "$@"
+      ;;
+    uninstall)
+      cmd_uninstall "$@"
+      ;;
+    version)
+      cmd_version "$@"
+      ;;
+    help|-h|--help)
+      usage
+      ;;
+    *)
+      usage_error "unknown command: $cmd"
+      ;;
+  esac
+}
+
+main "$@"

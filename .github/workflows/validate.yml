@@ -21,3 +21,5 @@ jobs:
         run: ./scripts/validate.sh
       - name: Linker behavioral tests
         run: ./scripts/test-link-project.sh
+      - name: hod CLI behavioral tests
+        run: ./scripts/test-hod.sh
