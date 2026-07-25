@@ -19,7 +19,7 @@ Use Herdr as the transport and control plane. The current CLI remains the single
 
 Herdr prompt input has no sender or provenance field. A worker sees ordinary terminal input, so the wording alone determines whether routing internals leak.
 
-Read [Delegation and direct-user contract](references/delegation-and-direct-user-contract.md) before writing or redirecting any worker prompt.
+Read [Delegation and direct-user contract](references/delegation-and-direct-user-contract.md) before writing or redirecting any worker prompt. It also defines the coordinator-only mode: when the user restricts the controller to coordination, the controller stops editing project files directly and routes every change through workers.
 
 ## Preflight and capability gate
 
@@ -79,7 +79,7 @@ the flat single-team flow above.
 
 ## Load detailed guidance as needed
 
-- [Delegation and direct-user contract](references/delegation-and-direct-user-contract.md): authority, prompt language, disclosure, follow-ups, and blocker questions.
+- [Delegation and direct-user contract](references/delegation-and-direct-user-contract.md): authority, prompt language, disclosure, follow-ups, blocker questions, and the coordinator-only controller mode.
 - [Agent lifecycle and waits](references/agent-lifecycle-and-waits.md): modern start/prompt/read/wait commands, state handling, sentinels, and redirects.
 - [Model routing and context](references/model-routing-and-context.md): choosing Codex, Claude, or Grok workers and shaping a minimal self-contained task packet.
 - [Parallel worktrees and ownership](references/parallel-worktrees-and-ownership.md): team size, file ownership, dependency ordering, isolation, and integration.

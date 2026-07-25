@@ -67,6 +67,39 @@ You are a sub-agent controlled by an orchestrator. Report back to the parent.
 - Summarize a relevant finding instead of copying a transcript wholesale.
 - Do not imply that inferred or worker-supplied facts came from the user.
 
+## Coordinator-only controller
+
+The user may restrict the controller to pure coordination ("coordinator-only",
+"do not edit files yourself"). Honor that restriction for the rest of the
+session unless the user lifts it.
+
+Allowed while coordinator-only:
+
+- Plan, split work, and write worker prompts.
+- Run Herdr control commands (split, start, prompt, wait, read).
+- Run read-only inspection: `git diff`, `git status`, file reads, pane reads.
+- Run verification commands that do not modify sources (builds, tests).
+- Integrate by directing a designated worker, and — only when commits are
+  authorized — commit worker-produced changes after verifying them.
+
+Not allowed:
+
+- Creating, editing, or deleting project files directly.
+- "Quick fixes" applied by the controller because delegation feels slow.
+- Committing changes the controller itself authored.
+
+When a change is too small to justify a worker, ask the user instead of
+editing silently. Conflict resolution during integration goes to a designated
+integrator worker, not to the controller's own hands.
+
+Coordinator-only pays off in long multi-worker sessions: the controller's
+context stays small, review stays independent of authorship, and every change
+traces to one worker transcript. For a single small task it usually costs more
+than it returns, so do not assume the mode without the user's request.
+[Portfolio hierarchy and tiers](portfolio-hierarchy.md) already imposes the
+same discipline on the portfolio orchestrator; this section extends it to a
+single-project controller on request.
+
 ## Handle worker replies faithfully
 
 - Separate a worker's claims from independently verified facts.
