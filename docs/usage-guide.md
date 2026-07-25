@@ -170,6 +170,12 @@ the affected files, fix only the demonstrated regression, and rerun the test.
 Keep both worktrees for inspection. Do not merge or clean them up.
 ```
 
+```text
+Run coordinator-only from now on: do not create or edit any file yourself.
+Delegate every change to a worker, verify its diff and checks, and ask me
+when a change seems too small to be worth a worker.
+```
+
 The controller should redirect an existing worker with new evidence rather than
 restart it or duplicate the original prompt.
 
