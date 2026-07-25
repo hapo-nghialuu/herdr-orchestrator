@@ -83,7 +83,9 @@ Select among the available kinds using observable task needs, such as:
 - repository conventions or an existing workflow tied to a CLI;
 - required local tool, connector, or skill availability;
 - compatibility with the requested output or validation path;
-- continuity with useful task state already present in a live agent;
+- continuity with useful task state already present in a live agent, weighed
+  against the independence rules in
+  [Agent lifecycle and waits](agent-lifecycle-and-waits.md);
 - the need for an independent implementation, test, or review pass.
 
 Prefer the simplest available homogeneous team when kinds are interchangeable.
