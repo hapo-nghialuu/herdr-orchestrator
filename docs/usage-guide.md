@@ -176,6 +176,12 @@ Delegate every change to a worker, verify its diff and checks, and ask me
 when a change seems too small to be worth a worker.
 ```
 
+```text
+Also run builds, tests, lint and packaging in a pane with `pane run` instead
+of your own shell. Wait for a per-run sentinel, read the output back, and
+report the real exit status — keep your own context for coordination.
+```
+
 The controller should redirect an existing worker with new evidence rather than
 restart it or duplicate the original prompt.
 

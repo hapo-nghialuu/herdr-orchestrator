@@ -77,8 +77,10 @@ Allowed while coordinator-only:
 
 - Plan, split work, and write worker prompts.
 - Run Herdr control commands (split, start, prompt, wait, read).
-- Run read-only inspection: `git diff`, `git status`, file reads, pane reads.
-- Run verification commands that do not modify sources (builds, tests).
+- Run short read-only inspection: `git status`, `git diff --stat`, targeted
+  file reads, pane reads.
+- Dispatch builds, tests, and other long or noisy commands to a pane and read
+  the result, rather than running them in the controller's own shell.
 - Integrate by directing a designated worker, and — only when commits are
   authorized — commit worker-produced changes after verifying them.
 
@@ -87,6 +89,31 @@ Not allowed:
 - Creating, editing, or deleting project files directly.
 - "Quick fixes" applied by the controller because delegation feels slow.
 - Committing changes the controller itself authored.
+- Running full build, test, lint, or packaging commands inline when a pane can
+  carry them.
+
+### Delegate execution, keep verification
+
+Coordinator-only restricts *where commands run*, not *who is accountable for
+the result*. Never accept "tests passed" as a worker's claim. Instead, run the
+command in a pane the controller owns and read its real output:
+
+```bash
+sentinel="VERIFY_$(date +%s)_$RANDOM"
+herdr pane run "$check_pane" "make test; printf '%s exit=%s\n' \"$sentinel\" \"\$?\""
+herdr pane wait-output "$check_pane" --match "$sentinel" --timeout 600000
+herdr pane read "$check_pane" --source recent-unwrapped --lines 120
+```
+
+`pane run` executes a shell command in a pane without an agent, so the output
+is first-hand evidence and the transcript stays out of the controller's
+context. Use a fresh sentinel per run and check the captured exit status, as
+required by [Agent lifecycle and waits](agent-lifecycle-and-waits.md).
+
+Keep inline in the controller only what is short, read-only, and needed to
+decide the next step — a `git status`, a `--stat` diff, a single file read.
+Everything that compiles, tests, packages, or prints hundreds of lines belongs
+in a pane.
 
 When a change is too small to justify a worker, ask the user instead of
 editing silently. Conflict resolution during integration goes to a designated
