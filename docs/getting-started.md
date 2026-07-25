@@ -91,6 +91,17 @@ worktree root.
 
 ## 4. Install and verify adapters
 
+Easier path with `hod` (no sibling workspace required — installs global adapters
+and can target one project):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/herdr-orchestrator/main/install.sh | sh
+hod status
+hod install --project ~/work/agent-workspace/project-a   # optional project link
+```
+
+Manual sibling-layout alternative:
+
 ```bash
 cd ~/work/agent-workspace
 ./herdr-orchestrator/scripts/link-project.sh install ./project-a

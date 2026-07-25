@@ -85,6 +85,26 @@ mix worker kinds.
 
 ## Quick Start
 
+### Install with `hod` (recommended)
+
+One-command bootstrap — no sibling workspace required:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/herdr-orchestrator/main/install.sh | sh
+hod status
+```
+
+`hod` clones the skill into `~/.hod/skill/`, installs the `hod` executable to
+`~/.local/bin/hod`, and links global adapters under
+`~/.claude/skills/herdr-orchestrator` and
+`~/.agents/skills/herdr-orchestrator` — the same adapter name a per-project
+install uses, so the skill resolves identically either way. Use
+`hod install --project /path/to/repo` to attach a
+single project instead (or as well). See `hod help` for `status`, `doctor`,
+`update`, and `uninstall`.
+
+### Alternative: manual sibling workspace
+
 ### 1. Create a sibling workspace
 
 The linker intentionally uses a strict sibling layout. The canonical
@@ -266,6 +286,9 @@ full operational contract.
 ```text
 herdr-orchestrator/
 ├── SKILL.md
+├── install.sh
+├── bin/
+│   └── hod
 ├── .github/
 │   └── workflows/
 │       └── validate.yml
@@ -274,6 +297,7 @@ herdr-orchestrator/
 ├── scripts/
 │   ├── link-all-projects.sh
 │   ├── link-project.sh
+│   ├── test-hod.sh
 │   ├── test-link-project.sh
 │   └── validate.sh
 ├── templates/
