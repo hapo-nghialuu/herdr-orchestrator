@@ -121,6 +121,39 @@ classification.
 
 Keep the user informed during long waits.
 
+## Continue a live agent or start a fresh one
+
+`agent start` always begins a new session with empty context; `agent prompt`
+against a live agent continues its existing conversation. Decide from the work
+itself, not from convenience.
+
+Continue the live agent when all of these hold:
+
+- the request directly extends what that agent just did (fix a failing check,
+  finish the artifact it produced, answer its blocking question);
+- its accumulated context is worth keeping — files already read, conventions
+  already learned, decisions already established;
+- the role and owned files are unchanged.
+
+Start a fresh agent when any of these hold:
+
+- the task needs an **independent perspective**: review, a second opinion, or a
+  competing approach. A reviewer must never be the session that wrote the code;
+  a session cannot audit reasoning it authored;
+- the role, owned files, or work context changes, so stale assumptions would
+  leak into the new task;
+- the existing session is spent — context is bloated, it went down a wrong
+  path, or it carries information the new task must not see;
+- the two tasks require information isolation.
+
+Prefer continuity for genuine follow-ups, but never trade away independent
+verification to save context. When in doubt for a review or audit step, start
+fresh. Record the reuse or restart decision and its reason in the team ledger.
+
+Do not prompt an agent that is `working` unless the message is an urgent
+correction: Herdr does not correlate turns, so the active turn may satisfy the
+wait and the reply may be read against the wrong request.
+
 ## Redirect and interrupt
 
 - Send a follow-up through `agent prompt` in direct-user voice. Include the new
