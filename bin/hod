@@ -394,12 +394,12 @@ cmd_install() {
     mkdir -p -- "$HOD_BIN_DIR"
     if [[ -L "$HOD_BIN_DIR/hod" || ! -e "$HOD_BIN_DIR/hod" ]]; then
       ln -sfn -- "$SKILL_DIR/bin/hod" "$HOD_BIN_DIR/hod"
-      chmod +x -- "$SKILL_DIR/bin/hod" 2>/dev/null || true
+      chmod +x "$SKILL_DIR/bin/hod" 2>/dev/null || true
       printf 'installed executable: %s -> %s\n' "$HOD_BIN_DIR/hod" "$SKILL_DIR/bin/hod"
     elif [[ -f "$HOD_BIN_DIR/hod" ]]; then
       # Replace plain file copy with current skill binary when identical path type.
       cp -- "$SKILL_DIR/bin/hod" "$HOD_BIN_DIR/hod"
-      chmod +x -- "$HOD_BIN_DIR/hod"
+      chmod +x "$HOD_BIN_DIR/hod"
       printf 'updated executable: %s\n' "$HOD_BIN_DIR/hod"
     fi
 

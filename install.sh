@@ -42,7 +42,7 @@ if [ ! -f "${SKILL_DIR}/bin/hod" ]; then
   fail "cloned checkout is missing bin/hod: ${SKILL_DIR}/bin/hod"
 fi
 
-chmod +x -- "${SKILL_DIR}/bin/hod"
+chmod +x "${SKILL_DIR}/bin/hod"
 
 # Prefer a symlink so updates to the skill checkout are picked up automatically.
 if [ -L "${HOD_BIN_DIR}/hod" ] || [ ! -e "${HOD_BIN_DIR}/hod" ]; then
@@ -50,7 +50,7 @@ if [ -L "${HOD_BIN_DIR}/hod" ] || [ ! -e "${HOD_BIN_DIR}/hod" ]; then
   printf 'installed: %s -> %s\n' "${HOD_BIN_DIR}/hod" "${SKILL_DIR}/bin/hod"
 else
   cp -- "${SKILL_DIR}/bin/hod" "${HOD_BIN_DIR}/hod"
-  chmod +x -- "${HOD_BIN_DIR}/hod"
+  chmod +x "${HOD_BIN_DIR}/hod"
   printf 'installed: %s (copied)\n' "${HOD_BIN_DIR}/hod"
 fi
 

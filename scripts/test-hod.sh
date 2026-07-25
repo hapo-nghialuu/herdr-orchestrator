@@ -45,7 +45,7 @@ export HOD_REPO_URL=$src_repo
 export PATH="$bin_dir:$PATH"
 
 hod=$repo_dir/bin/hod
-chmod +x -- "$hod" "$repo_dir/install.sh" 2>/dev/null || true
+chmod +x "$hod" "$repo_dir/install.sh" 2>/dev/null || true
 
 pass=0
 fail_count=0
@@ -155,7 +155,7 @@ if [ "$1" = "--version" ]; then
 fi
 exit 0
 EOF
-    chmod +x -- "$stub_dir/$tool"
+    chmod +x "$stub_dir/$tool"
   fi
 done
 export PATH="$stub_dir:$bin_dir:$PATH"
