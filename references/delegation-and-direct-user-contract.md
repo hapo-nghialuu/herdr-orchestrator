@@ -119,6 +119,14 @@ When a change is too small to justify a worker, ask the user instead of
 editing silently. Conflict resolution during integration goes to a designated
 integrator worker, not to the controller's own hands.
 
+The user may also enforce this with tooling rather than instruction. For a
+Claude Code agent, `hod settings install` writes per-role permission profiles
+into `<project>/.claude/settings.<role>.json`; starting a worker with
+`-- --settings .claude/settings.controller.json` removes the edit tools
+entirely. Treat an enforced profile as the same contract, not a lesser one:
+do not work around a denied tool by shelling out or delegating the edit to
+another agent — report the boundary to the user instead.
+
 Coordinator-only pays off in long multi-worker sessions: the controller's
 context stays small, review stays independent of authorship, and every change
 traces to one worker transcript. For a single small task it usually costs more

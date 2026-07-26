@@ -103,6 +103,31 @@ install uses, so the skill resolves identically either way. Use
 single project instead (or as well). See `hod help` for `status`, `doctor`,
 `update`, and `uninstall`.
 
+#### Per-role permission profiles
+
+`hod settings install` copies Claude Code settings profiles into a project so a
+worker's role is enforced by the harness rather than by wording in a prompt:
+
+```bash
+hod settings list                      # controller · impl · reviewer
+hod settings install                   # into the current project
+hod settings install --project <path> --role reviewer
+```
+
+Each profile writes `.claude/settings.<role>.json` and records it in the
+project's local Git exclude. A `controller` or `reviewer` profile removes the
+edit tools outright, so those agents cannot modify files even if asked to.
+Profiles contain permission boundaries only — never credentials — and Claude
+Code merges them over the project's existing settings, so tokens, endpoints and
+hooks are inherited. Start a worker with one:
+
+```bash
+herdr agent start reviewer --kind claude --pane "$pane" \
+  -- --settings .claude/settings.reviewer.json
+```
+
+Profiles apply to Claude Code workers; Codex and Grok use their own flags.
+
 ### Alternative: manual sibling workspace
 
 ### 1. Create a sibling workspace
@@ -301,7 +326,10 @@ herdr-orchestrator/
 │   ├── test-link-project.sh
 │   └── validate.sh
 ├── templates/
-│   └── policy-template.md
+│   ├── policy-template.md
+│   ├── settings-controller.json
+│   ├── settings-impl.json
+│   └── settings-reviewer.json
 ├── references/
 │   ├── agent-lifecycle-and-waits.md
 │   ├── delegation-and-direct-user-contract.md

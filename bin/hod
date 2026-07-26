@@ -13,6 +13,8 @@ Usage:
   hod doctor
   hod update
   hod uninstall [--project <path>] [--purge]
+  hod settings list
+  hod settings install [--project <path>] [--role <name>] [--force]
   hod version
   hod help
 
@@ -25,8 +27,19 @@ Subcommands:
   doctor      status plus remediation and deeper health checks
   update      Fast-forward the skill checkout (refuses local modifications)
   uninstall   Remove hod-managed adapter symlinks; --purge also removes skill data
+  settings    Copy per-role Claude Code settings profiles into a project
+              (list shows the roles; install writes .claude/settings.<role>.json)
   version     Print the hod version
   help        Show this help
+
+Settings profiles carry permission boundaries only — never credentials.
+Claude Code merges them over the project's own settings, so tokens, endpoints
+and hooks are inherited. Start a worker with them like this:
+
+  herdr agent start reviewer --kind claude --pane "$pane" \
+    -- --settings .claude/settings.reviewer.json
+
+They apply to Claude Code workers only; Codex and Grok use their own flags.
 
 Environment overrides (for tests and custom layouts):
   HOD_HOME         default: ~/.hod          (skill lives at $HOD_HOME/skill)
@@ -754,6 +767,169 @@ cmd_uninstall() {
   fi
 }
 
+SETTINGS_ROLES="controller impl reviewer"
+
+settings_template_path() {
+  printf '%s/templates/settings-%s.json\n' "$SKILL_DIR" "$1"
+}
+
+settings_role_summary() {
+  case $1 in
+    controller) printf 'no file edits — enforces coordinator-only delegation\n' ;;
+    impl) printf 'may edit code; cannot push, merge, hard-reset or tag\n' ;;
+    reviewer) printf 'read-only — no edits, no writing git commands, no rm\n' ;;
+    *) printf 'unknown role\n' ;;
+  esac
+}
+
+cmd_settings_list() {
+  local role template
+
+  printf 'Available settings profiles (installed as .claude/settings.<role>.json):\n\n'
+  for role in $SETTINGS_ROLES; do
+    template=$(settings_template_path "$role")
+    if [[ -f "$template" ]]; then
+      printf '  %-11s %s\n' "$role" "$(settings_role_summary "$role")"
+    else
+      printf '  %-11s (template missing: %s)\n' "$role" "$template"
+    fi
+  done
+  printf '\nProfiles set permission boundaries only; credentials and hooks are\n'
+  printf 'inherited from the project and user settings Claude Code already loads.\n'
+}
+
+# Resolve the project the settings profiles are written into: an explicit
+# --project path, otherwise the caller's current directory.
+resolve_settings_project() {
+  local project_path=$1
+  local project_dir
+
+  [[ -n "$project_path" ]] || project_path=$PWD
+  [[ -d "$project_path" ]] || fail "project path is not an existing directory: $project_path"
+  project_dir=$(cd -- "$project_path" && pwd -P)
+
+  [[ -e "$project_dir/.git" ]] || fail "project must contain a .git marker: $project_dir"
+  [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
+  command -v git >/dev/null 2>&1 || fail "git executable is required"
+
+  local git_top
+  git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null) || \
+    fail "project path is not a valid Git worktree: $project_dir"
+  git_top=$(cd -- "$git_top" && pwd -P)
+  [[ "$git_top" == "$project_dir" ]] || \
+    fail "project path must be its Git worktree root: $project_dir"
+
+  printf '%s\n' "$project_dir"
+}
+
+settings_exclude_entry() {
+  local project_dir=$1
+  local entry=$2
+  local common_dir exclude_file
+
+  common_dir=$(git -C "$project_dir" rev-parse --git-common-dir) || \
+    fail "cannot resolve git common directory: $project_dir"
+  case $common_dir in
+    /*) ;;
+    *) common_dir=$project_dir/$common_dir ;;
+  esac
+  [[ -d "$common_dir" ]] || fail "git common directory does not exist: $common_dir"
+  common_dir=$(cd -- "$common_dir" && pwd -P)
+  exclude_file=$common_dir/info/exclude
+  mkdir -p -- "$(dirname -- "$exclude_file")"
+
+  if [[ -f "$exclude_file" ]] && grep -qxF -- "$entry" "$exclude_file"; then
+    return 0
+  fi
+  printf '%s\n' "$entry" >> "$exclude_file"
+  printf 'excluded from git: %s\n' "$entry"
+}
+
+cmd_settings_install() {
+  local project_path="" requested_role="" force=false
+  local roles role template dest rel project_dir written=0
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --project)
+        [[ $# -ge 2 ]] || usage_error "--project requires a path"
+        project_path=$2
+        shift 2
+        ;;
+      --role)
+        [[ $# -ge 2 ]] || usage_error "--role requires a role name"
+        requested_role=$2
+        shift 2
+        ;;
+      --force)
+        force=true
+        shift
+        ;;
+      *)
+        usage_error "unknown option for settings install: $1"
+        ;;
+    esac
+  done
+
+  if [[ -n "$requested_role" ]]; then
+    case " $SETTINGS_ROLES " in
+      *" $requested_role "*) roles=$requested_role ;;
+      *) usage_error "unknown role: $requested_role (expected one of: $SETTINGS_ROLES)" ;;
+    esac
+  else
+    roles=$SETTINGS_ROLES
+  fi
+
+  project_dir=$(resolve_settings_project "$project_path")
+  check_safe_parent "$project_dir/.claude"
+  mkdir -p -- "$project_dir/.claude"
+
+  for role in $roles; do
+    template=$(settings_template_path "$role")
+    [[ -f "$template" ]] || fail "settings template missing: $template"
+
+    rel=.claude/settings.$role.json
+    dest=$project_dir/$rel
+
+    if [[ -L "$dest" ]]; then
+      fail "settings path is a symlink, refusing to write: $dest"
+    fi
+    if [[ -e "$dest" && "$force" != true ]]; then
+      printf 'kept existing (use --force to overwrite): %s\n' "$dest"
+      settings_exclude_entry "$project_dir" "$rel"
+      continue
+    fi
+
+    cp -- "$template" "$dest"
+    printf 'installed: %s (%s)\n' "$dest" "$(settings_role_summary "$role")"
+    settings_exclude_entry "$project_dir" "$rel"
+    written=$((written + 1))
+  done
+
+  printf '\n%d profile(s) written. Start a Claude worker with, for example:\n' "$written"
+  printf '  herdr agent start reviewer --kind claude --pane "$pane" \\\n'
+  printf '    -- --settings .claude/settings.reviewer.json\n'
+}
+
+cmd_settings() {
+  [[ $# -gt 0 ]] || usage_error "settings requires a subcommand: list or install"
+
+  local sub=$1
+  shift
+
+  case $sub in
+    list)
+      cmd_settings_list "$@"
+      ;;
+    install)
+      cmd_settings_install "$@"
+      ;;
+    *)
+      usage_error "unknown settings subcommand: $sub (expected list or install)"
+      ;;
+  esac
+}
+
 cmd_version() {
   printf 'hod %s\n' "$HOD_VERSION"
 }
@@ -784,6 +960,9 @@ main() {
       ;;
     uninstall)
       cmd_uninstall "$@"
+      ;;
+    settings)
+      cmd_settings "$@"
       ;;
     version)
       cmd_version "$@"

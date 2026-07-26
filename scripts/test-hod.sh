@@ -276,6 +276,64 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# settings profiles
+# ---------------------------------------------------------------------------
+sproj=$tmp_root/projects/settings-demo
+mkdir -p -- "$sproj"
+git -C "$sproj" init -q
+git -C "$sproj" config user.email "hod-test@example.com"
+git -C "$sproj" config user.name "hod-test"
+
+expect_success 'settings list exits 0' \
+  "$hod" settings list
+
+expect_rejection 'settings rejects unknown subcommand' \
+  "$hod" settings bogus
+
+expect_rejection 'settings install rejects unknown role' \
+  "$hod" settings install --project "$sproj" --role nope
+
+expect_rejection 'settings install rejects non-git target' \
+  "$hod" settings install --project "$plain"
+
+expect_success 'settings install writes all roles' \
+  "$hod" settings install --project "$sproj"
+
+for role in controller impl reviewer; do
+  expect_success "settings profile written: $role" \
+    test -f "$sproj/.claude/settings.$role.json"
+  expect_success "settings profile is valid json: $role" \
+    python3 -c "import json,sys; json.load(open(sys.argv[1]))" \
+      "$sproj/.claude/settings.$role.json"
+  expect_success "settings profile excluded from git: $role" \
+    grep -qxF -- ".claude/settings.$role.json" "$sproj/.git/info/exclude"
+done
+
+# Profiles must never ship credentials.
+expect_rejection 'settings profiles carry no credential keys' \
+  grep -rqE 'ANTHROPIC_(API_KEY|AUTH_TOKEN)|apiKeyHelper' "$sproj/.claude/"
+
+# Existing user edits are preserved unless --force.
+printf '{ "permissions": { "deny": ["Mine"] } }\n' >"$sproj/.claude/settings.impl.json"
+expect_success 'settings install keeps an existing profile' \
+  "$hod" settings install --project "$sproj" --role impl
+expect_success 'existing profile content untouched' \
+  grep -q 'Mine' "$sproj/.claude/settings.impl.json"
+
+expect_success 'settings install --force overwrites' \
+  "$hod" settings install --project "$sproj" --role impl --force
+expect_rejection 'forced profile no longer has user content' \
+  grep -q 'Mine' "$sproj/.claude/settings.impl.json"
+
+# A symlinked destination must be refused rather than followed.
+rm -f -- "$sproj/.claude/settings.reviewer.json"
+ln -s /etc/hosts "$sproj/.claude/settings.reviewer.json"
+expect_rejection 'settings install refuses a symlinked destination' \
+  "$hod" settings install --project "$sproj" --role reviewer --force
+expect_success 'symlink target untouched' \
+  test -L "$sproj/.claude/settings.reviewer.json"
+
+# ---------------------------------------------------------------------------
 # help / version
 # ---------------------------------------------------------------------------
 expect_success 'help exits 0' "$hod" help
