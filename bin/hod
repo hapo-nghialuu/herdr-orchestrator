@@ -605,6 +605,18 @@ cmd_doctor() {
   if [[ -d "$SKILL_DIR/.git" ]]; then
     commit=$(skill_commit)
     mark_ok "skill checkout: $SKILL_DIR (commit ${commit:-unknown})"
+    if git -C "$SKILL_DIR" symbolic-ref -q HEAD >/dev/null 2>&1; then
+      mark_ok "checkout mode: branch $(git -C "$SKILL_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null) ('hod update' fast-forwards)"
+    else
+      local pin_tag
+      pin_tag=$(git -C "$SKILL_DIR" describe --tags --exact-match 2>/dev/null || true)
+      if [[ -n "$pin_tag" ]]; then
+        mark_ok "checkout mode: pinned to tag $pin_tag ('hod update' moves to the newest tag)"
+      else
+        mark_bad "checkout mode: detached at a non-tag commit"
+        remediate "cd '$SKILL_DIR' && git checkout main   # or re-run install"
+      fi
+    fi
     if skill_has_local_changes; then
       mark_bad "skill checkout has local uncommitted changes"
       remediate "cd '$SKILL_DIR' && git status"
@@ -657,6 +669,24 @@ cmd_update() {
 
   local old new
   old=$(git -C "$SKILL_DIR" rev-parse --short HEAD)
+
+  # A pinned install (HOD_REF / --ref to a tag) leaves the checkout detached,
+  # where `pull --ff-only` cannot work. Move pin → newest tag instead.
+  if ! git -C "$SKILL_DIR" symbolic-ref -q HEAD >/dev/null 2>&1; then
+    git -C "$SKILL_DIR" fetch --tags --quiet 2>/dev/null || \
+      git -C "$SKILL_DIR" fetch --tags 2>/dev/null || true
+    local latest_tag
+    latest_tag=$(git -C "$SKILL_DIR" tag --sort=-v:refname | head -n 1)
+    [[ -n "$latest_tag" ]] || \
+      fail "checkout is detached and no tags exist; re-run install, or checkout a branch in $SKILL_DIR"
+    git -C "$SKILL_DIR" checkout --quiet "$latest_tag" || \
+      fail "failed to checkout tag: $latest_tag"
+    new=$(git -C "$SKILL_DIR" rev-parse --short HEAD)
+    printf 'updated pinned skill: %s → %s (%s)\n' "$old" "$new" "$latest_tag"
+    return 0
+  fi
+
+  git -C "$SKILL_DIR" fetch --tags --quiet 2>/dev/null || true
   git -C "$SKILL_DIR" pull --ff-only || \
     fail "git pull --ff-only failed; resolve manually in $SKILL_DIR"
   new=$(git -C "$SKILL_DIR" rev-parse --short HEAD)
