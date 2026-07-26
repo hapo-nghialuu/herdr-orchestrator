@@ -276,6 +276,38 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# pinned (tag) install and update
+# ---------------------------------------------------------------------------
+# Give the source repo two tags so update has somewhere to move.
+git -C "$src_repo" tag -a vt1 -m t1
+printf 'marker vt2\n' >>"$src_repo/README.md"
+git -C "$src_repo" add -A
+git -C "$src_repo" commit -q -m "vt2 content"
+git -C "$src_repo" tag -a vt2 -m t2
+
+# Fully isolated home/adapters so earlier global installs cannot interfere.
+pin_home=$tmp_root/pin-home
+pin_env=(env HOD_HOME="$pin_home" HOD_BIN_DIR="$tmp_root/pin-bin" \
+  HOD_CLAUDE_DIR="$tmp_root/pin-claude" HOD_AGENTS_DIR="$tmp_root/pin-agents")
+mkdir -p -- "$pin_home" "$tmp_root/pin-bin" "$tmp_root/pin-claude" "$tmp_root/pin-agents"
+
+expect_success 'install --ref pins to a tag' \
+  "${pin_env[@]}" "$hod" install --ref vt1
+
+pinned_tag_is() {
+  local want=$1
+  [[ "$(git -C "$pin_home/skill" describe --tags --exact-match 2>/dev/null)" == "$want" ]]
+}
+expect_success 'pinned checkout sits at the requested tag' pinned_tag_is vt1
+
+expect_success 'update on a pinned checkout moves to the newest tag' \
+  "${pin_env[@]}" "$hod" update
+expect_success 'pinned checkout now at the newest tag' pinned_tag_is vt2
+
+expect_success 'doctor reports pinned mode' \
+  bash -c "$(printf '%q ' "${pin_env[@]:1}") '$hod' doctor 2>/dev/null | grep -q 'pinned to tag vt2'"
+
+# ---------------------------------------------------------------------------
 # settings profiles
 # ---------------------------------------------------------------------------
 sproj=$tmp_root/projects/settings-demo
