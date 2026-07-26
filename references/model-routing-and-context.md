@@ -102,6 +102,43 @@ version: never route around a denied tool by shelling out or handing the action
 to another agent. Boundaries are fixed when the agent starts and cannot be
 tightened mid-session — to change a worker's role, start a new agent.
 
+## Compose the full start command
+
+Model, context revival, and role boundary are independent axes; a real start
+command usually combines them. Reference shapes for a Claude worker:
+
+```bash
+# Implementer continuing its previous session, with the impl boundary:
+herdr agent start impl --kind claude --pane "$p1" \
+  -- --continue --settings .claude/settings.impl.json
+
+# Reviewer: always a fresh session — no --continue, no --resume:
+herdr agent start reviewer --kind claude --pane "$p2" \
+  -- --settings .claude/settings.reviewer.json --model <model-id>
+```
+
+Flag conflicts to refuse, not merely avoid:
+
+- `--dangerously-skip-permissions` overrides every `deny` rule loaded through
+  `--settings` (verified empirically: a reviewer profile that blocks Edit and
+  Write stops blocking anything once that flag is present). When the user asks
+  for both, surface the contradiction and let the user pick one; never pass
+  them together on a role-bounded worker.
+- `--continue`/`--resume` on a reviewer or auditor contradicts the fresh-
+  session rule in [Agent lifecycle and waits](agent-lifecycle-and-waits.md),
+  even though the flags are otherwise legitimate for implementers.
+
+Quick per-CLI map of the three axes:
+
+| Axis | Claude Code | Codex | Grok |
+| --- | --- | --- | --- |
+| Model | `--model` | `-m` + `-c model_reasoning_effort=` | `-m` |
+| Revive context | `--continue` / `--resume` | `codex exec resume <id>` | `--resume <id>` |
+| Role boundary | `--settings <file>` | `-s <sandbox>` `-a <policy>` | `--allow/--deny/--disallowed-tools` |
+
+Resolve exact syntax from installed `--help` before use; the table names the
+axes, not the grammar.
+
 ## Choose when the user does not
 
 Check installed Herdr help and the relevant local executables or integrations.

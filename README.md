@@ -341,6 +341,7 @@ herdr-orchestrator/
 └── docs/
     ├── getting-started.md
     ├── portfolio-orchestration.md
+    ├── quickstart.md
     ├── project-layouts.md
     ├── troubleshooting.md
     └── usage-guide.md
@@ -352,6 +353,7 @@ repository maintainers.
 
 ## Documentation
 
+- [Quickstart — four levels, start in 2 minutes](docs/quickstart.md)
 - [Getting started](docs/getting-started.md)
 - [Usage guide and prompt recipes](docs/usage-guide.md)
 - [Portfolio orchestration across projects](docs/portfolio-orchestration.md)
