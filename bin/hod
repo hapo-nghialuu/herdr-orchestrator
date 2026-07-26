@@ -796,6 +796,13 @@ cmd_settings_list() {
   done
   printf '\nProfiles set permission boundaries only; credentials and hooks are\n'
   printf 'inherited from the project and user settings Claude Code already loads.\n'
+  printf '\nStart a Claude worker with a profile (native args go after --):\n\n'
+  printf '  herdr agent start impl --kind claude --pane "$pane" \\\n'
+  printf '    -- --continue --settings .claude/settings.impl.json\n'
+  printf '  herdr agent start reviewer --kind claude --pane "$pane" \\\n'
+  printf '    -- --settings .claude/settings.reviewer.json   # fresh session, never --continue\n'
+  printf '\nNever combine a profile with --dangerously-skip-permissions: that flag\n'
+  printf 'overrides every deny rule and the profile stops enforcing anything.\n'
 }
 
 # Resolve the project the settings profiles are written into: an explicit

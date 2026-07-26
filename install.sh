@@ -8,6 +8,8 @@ set -eu
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/herdr-orchestrator.git}"
 HOD_HOME="${HOD_HOME:-${HOME}/.hod}"
 HOD_BIN_DIR="${HOD_BIN_DIR:-${HOME}/.local/bin}"
+# Optional version pin, e.g. HOD_REF=v0.1.0. Default: latest main.
+HOD_REF="${HOD_REF:-}"
 SKILL_DIR="${HOD_HOME}/skill"
 
 fail() {
@@ -36,6 +38,13 @@ else
   fi
   printf 'cloning %s -> %s\n' "$HOD_REPO_URL" "$SKILL_DIR"
   git clone -- "$HOD_REPO_URL" "$SKILL_DIR" || fail "git clone failed"
+fi
+
+if [ -n "$HOD_REF" ]; then
+  git -C "$SKILL_DIR" fetch --tags --quiet 2>/dev/null || true
+  git -C "$SKILL_DIR" checkout --quiet "$HOD_REF" || \
+    fail "failed to checkout HOD_REF: $HOD_REF"
+  printf 'pinned to ref: %s\n' "$HOD_REF"
 fi
 
 if [ ! -f "${SKILL_DIR}/bin/hod" ]; then
