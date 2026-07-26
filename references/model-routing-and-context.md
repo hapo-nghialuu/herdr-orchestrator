@@ -25,16 +25,14 @@ herdr agent start --help   # authoritative list of --kind values
 command -v codex           # verify the matching local CLI for each candidate kind
 ```
 
-Typical primary-kind start commands:
+Start any confirmed kind the same way:
 
 ```bash
-herdr agent start worker_name --kind codex --pane "$worker_pane"
-herdr agent start worker_name --kind claude --pane "$worker_pane"
-herdr agent start worker_name --kind grok --pane "$worker_pane"
+herdr agent start worker_name --kind <kind-from-help> --pane "$worker_pane"
 ```
 
-Any other kind listed by installed help is equally valid when its CLI is
-available and the user's request or the task fit supports it.
+Any kind listed by installed help is equally valid when its CLI is available
+and the user's request or the task fit supports it.
 
 ## Pass a requested model through the native argument separator
 
@@ -74,6 +72,35 @@ above. Report the rejection and the CLI's own error verbatim.
 When the user gives no model, omit the flag so the CLI uses its configured
 default (for example the `model` and `model_reasoning_effort` already set in
 `config.toml`); do not invent one.
+
+## Enforce a worker's role with native permission flags
+
+A role stated in a prompt is an instruction; a role expressed in the CLI's own
+permission surface is a boundary. Prefer the boundary for read-only reviewers
+and for any worker that must not publish, and pass it after `--` like any other
+native argument.
+
+Each CLI exposes this differently, so resolve the exact rule syntax from the
+installed help before using it — the flag names below are stable, the rule
+grammar is not:
+
+```bash
+claude --help   # --settings <file>, --setting-sources, --tools
+codex --help    # -s/--sandbox <mode>, -a/--ask-for-approval <policy>
+grok --help     # --allow/--deny <rule>, --disallowed-tools <tools>
+```
+
+- **Claude Code** takes a settings file: `-- --settings <path>`. `hod settings
+  install` writes ready-made `controller`, `impl` and `reviewer` profiles into
+  `<project>/.claude/settings.<role>.json`.
+- **Codex** constrains execution through a sandbox mode and an approval
+  policy rather than per-tool rules.
+- **Grok** takes allow/deny rules and can drop built-in tools outright.
+
+An enforced boundary is the same contract as the written one, not a lighter
+version: never route around a denied tool by shelling out or handing the action
+to another agent. Boundaries are fixed when the agent starts and cannot be
+tightened mid-session — to change a worker's role, start a new agent.
 
 ## Choose when the user does not
 

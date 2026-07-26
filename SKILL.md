@@ -45,14 +45,7 @@ If either environment value is absent, stop and tell the user to launch the cont
 
 Treat installed group and leaf help as authoritative. Read [Agent lifecycle and waits](references/agent-lifecycle-and-waits.md) and inspect every relevant leaf with `--help` before mutation. Never run bare `herdr` for discovery, probe a mutating leaf by omitting arguments, or infer syntax only from a version number.
 
-Use the modern flow only when help confirms all of these forms:
-
-- `agent start <name> --kind KIND --pane ID`
-- `agent prompt <target> <text>`
-- `agent send-keys <target>`
-- `agent wait <target> [--until STATUS]`
-
-If modern commands are absent but help exactly matches the legacy forms, read [Legacy Herdr 0.7.1](references/legacy-herdr-0.7.1.md) before acting. If neither family matches, fail closed and show the unsupported capability difference to the user.
+Use the modern flow only when installed help confirms the complete command family listed in that reference. If modern commands are absent but help exactly matches the legacy forms, read [Legacy Herdr 0.7.1](references/legacy-herdr-0.7.1.md) before acting. If neither family matches, fail closed and show the unsupported capability difference to the user.
 
 Use explicit pane IDs or unique live agent names. Parse IDs from JSON with `jq -e`; never predict them from examples, focus, or sidebar position. Prefer `--current` only for the calling pane and `--no-focus` for background work.
 
@@ -65,7 +58,7 @@ Use explicit pane IDs or unique live agent names. Parse IDs from JSON with `jq -
 5. Send one complete direct-user prompt atomically. Do not reveal internal delegation or ask the worker to report to a controller.
 6. Wait with bounded lifecycle commands, inspect terminal evidence, resolve blockers within established intent, and redirect only with relevant new facts.
 7. Inspect the integrated diff or artifacts, run appropriate compile/lint/tests, and use an independent read-only reviewer for material code changes.
-8. Report one cohesive, evidence-backed result to the user. Keep task panes for inspection by default; clean up only task-created resources and only when authorized.
+8. Report one cohesive, evidence-backed result to the user, ending with a distinct section for anything still needing a user decision. Keep task panes for inspection by default; clean up only task-created resources and only when authorized.
 
 ## Hierarchical portfolio mode
 

@@ -19,6 +19,15 @@ Choose short role names matching `[a-z][a-z0-9_-]{0,31}`, such as `api_impl`,
 `tester`, and `reviewer`. Give each worker a distinct, useful role. Do not create
 duplicate workers with the same task.
 
+A ledger held only in the controller's context dies with the session, and the
+loss scales with team size: which worker owns which file becomes unrecoverable
+exactly when it matters most. From three concurrent workers on, write the
+ledger to a file outside the project checkout — one task-scoped path, Markdown,
+updated whenever ownership, status, or dependencies change. Below three
+workers, an in-context ledger is enough. A controller resuming after a restart
+reconciles from that file plus `herdr agent list`, and adopts or replaces each
+agent explicitly rather than guessing.
+
 Use one interactive coding agent per pane. Default to sibling panes in the
 current tab and current working directory. Add workspaces, tabs, sessions, or
 worktrees only when topology or isolation requires them.
@@ -50,6 +59,13 @@ tightly interleaved decisions.
 If two workers need the same file, sequence their turns or reassign ownership
 before either edits. Stop conflicting edits immediately. Resolve the intended
 result centrally; never let workers race and hope the final write wins.
+
+Central resolution means one accountable decision, not one pair of hands. Name
+a single integrator worker and give it the conflicting files; the controller
+decides the intended outcome and states it, but does not edit. This is
+mandatory whenever parallel work produces overlapping edits — a controller
+that repairs a conflict itself has silently become a writer, and the change
+loses its worker transcript.
 
 ## Choose checkout isolation
 

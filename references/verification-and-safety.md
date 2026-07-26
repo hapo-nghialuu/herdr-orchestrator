@@ -15,9 +15,17 @@ confidence, or verbal `done` is not proof.
 - Validate requested behavior and edge cases, not only file existence.
 - Record failed or skipped checks and explain their impact.
 - Use an independent read-only reviewer for material code changes after
-  integration and testing.
+  integration and testing. Review is a delegated role, never something the
+  controller performs on its own: a controller that reviews the diff itself
+  produces an opinion, not an independent check. Start the reviewer as a fresh
+  agent — never the session that wrote the code, and never a resumed
+  transcript of it.
 - Require reviewer findings to cite actionable file and line evidence.
 - Resolve correctness or security findings before reporting completion.
+
+Reading a diff or a test result to confirm scope and outcome remains the
+controller's own duty and is not review; see
+[Delegation and direct-user contract](delegation-and-direct-user-contract.md).
 
 Report a cohesive verified outcome. Distinguish verified facts from worker
 claims and unresolved risk.
@@ -82,7 +90,5 @@ target, or an unexpected response shape:
 5. Surface the incompatibility to the user when it cannot be resolved within
    established task context.
 
-Parse identifiers from structured output with `jq -e`. Never infer IDs from
-focus, pane order, sidebar position, or examples. Treat a timeout as a monitoring
-event: inspect state and output before deciding whether to wait, redirect, or ask
-the user.
+Treat a timeout as a monitoring event: inspect state and output before deciding
+whether to wait, redirect, or ask the user.

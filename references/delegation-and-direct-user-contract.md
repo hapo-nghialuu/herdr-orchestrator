@@ -73,24 +73,34 @@ The user may restrict the controller to pure coordination ("coordinator-only",
 "do not edit files yourself"). Honor that restriction for the rest of the
 session unless the user lifts it.
 
-Allowed while coordinator-only:
+The line is between *performing* work and *reading* its evidence. The
+controller performs nothing and reads everything.
 
-- Plan, split work, and write worker prompts.
-- Run Herdr control commands (split, start, prompt, wait, read).
-- Run short read-only inspection: `git status`, `git diff --stat`, targeted
-  file reads, pane reads.
-- Dispatch builds, tests, and other long or noisy commands to a pane and read
-  the result, rather than running them in the controller's own shell.
-- Integrate by directing a designated worker, and — only when commits are
-  authorized — commit worker-produced changes after verifying them.
+Never performed by the controller — delegate each one:
 
-Not allowed:
-
-- Creating, editing, or deleting project files directly.
-- "Quick fixes" applied by the controller because delegation feels slow.
+- Writing, editing, or deleting project files, including "quick fixes" it
+  judges too small to delegate.
+- Building, testing, linting, type-checking, packaging, or running the app.
+- Debugging: reproducing a failure, adding instrumentation, bisecting.
+- Reviewing code itself. Review is always a separate agent; see
+  [Verification and safety](verification-and-safety.md).
+- Resolving merge or interface conflicts by hand.
 - Committing changes the controller itself authored.
-- Running full build, test, lint, or packaging commands inline when a pane can
-  carry them.
+
+Always done by the controller — these are accountability, not work:
+
+- Planning, splitting work, assigning file ownership, and writing prompts.
+- Herdr control commands: split, start, prompt, wait, read, list.
+- Dispatching every build, test, or long command to a pane and reading its
+  real output.
+- Short, targeted read-only inspection needed to decide the next step:
+  `git status`, `git diff --stat`, a specific file, a pane read. Read to
+  decide, not to work; do not pull whole trees or long logs into context.
+- Judging whether evidence actually satisfies the acceptance criteria.
+- Committing verified worker-produced changes when commits are authorized.
+
+A controller that delegates work but accepts claims without reading evidence
+has not delegated — it has abdicated. Both halves are required.
 
 ### Delegate execution, keep verification
 
@@ -144,3 +154,21 @@ single-project controller on request.
 - Present the final result as one cohesive answer from the accountable agent.
 - Mention worker mechanics only when the user asks or when they materially help
   explain the result.
+
+### Collect and surface open questions
+
+Summarising a team's work tends to swallow the questions each worker raised.
+Prevent that explicitly.
+
+- After each worker settles, extract its open questions and blockers before
+  moving on. If a worker reported none but its task plainly left something
+  undecided, ask it directly rather than assuming there is nothing.
+- Keep every question attributed to its source until it is resolved.
+- Answer only what established user intent already covers. Anything touching
+  scope, cost, risk, authority, or an externally visible effect belongs to the
+  user.
+- Batch questions across workers into one message instead of interrupting per
+  blocker, unless a worker is stalled and cannot continue without an answer.
+- The final report must carry a distinct section listing what still needs a
+  user decision, or state plainly that nothing does. Never end a multi-worker
+  task with open questions left inside a worker transcript.

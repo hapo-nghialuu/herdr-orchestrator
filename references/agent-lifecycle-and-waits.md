@@ -121,6 +121,13 @@ classification.
 
 Keep the user informed during long waits.
 
+With several workers running, wait on them in turn rather than blocking on one
+until it finishes: refresh `agent list`, then take the settled or blocked ones
+first. A worker sitting `idle` with a finished result is not done — it is
+waiting to be harvested, and an unharvested worker is the usual reason a team
+appears stalled. Harvest each one's evidence and open questions before starting
+the next round.
+
 ## Continue a live agent or start a fresh one
 
 `agent start` always begins a new session with empty context; `agent prompt`
@@ -149,6 +156,29 @@ Start a fresh agent when any of these hold:
 Prefer continuity for genuine follow-ups, but never trade away independent
 verification to save context. When in doubt for a review or audit step, start
 fresh. Record the reuse or restart decision and its reason in the team ledger.
+
+### Reviving a context after the agent exited
+
+A live agent is the cheapest continuation, but its context is not lost when it
+exits. Most agent CLIs can reload a previous transcript at startup — Claude
+Code takes `--continue` for the latest conversation in that directory and
+`--resume` to pick one. Pass such a flag after `--`:
+
+```bash
+herdr agent start api_impl --kind claude --pane "$worker_pane" -- --continue
+```
+
+Use this when the same role resumes the same work and its earlier context is
+worth more than the tokens to rebuild it — the agent had read many files,
+learned conventions, or established decisions the new task depends on.
+
+Resuming reopens exactly the reasoning the fresh-start rules above exist to
+avoid, so the same bar applies, only harder to see: **never resume a
+transcript for a review, audit, or second-opinion step.** A resumed reviewer
+looks independent and is not. When the role, owned files, or work context
+changed, start genuinely fresh instead. State in the ledger that a session was
+resumed, and from which task, so a later reader can tell an independent pass
+from a continued one.
 
 Do not prompt an agent that is `working` unless the message is an urgent
 correction: Herdr does not correlate turns, so the active turn may satisfy the
