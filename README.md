@@ -26,7 +26,91 @@
 [Herdr](https://herdr.dev/), verifies their work with real evidence, and
 reports back with the questions only you can answer.
 
-It ships as two deliberately separate parts:
+## What is this?
+
+Running several AI coding agents at once is easy. Keeping track of them is
+not — you end up with a dozen terminal tabs, no idea which agent is waiting on
+you, and no way to tell whether "done" actually means the code works.
+
+`hod` gives you **one agent to talk to**. You describe what you want; it plans
+the work, hands pieces to other agents in their own [Herdr](https://herdr.dev/)
+panes, checks their output against real diffs and real test runs, and comes
+back with one answer — plus a list of anything only you can decide.
+
+```text
+You  →  Controller  →  Worker · code
+                    →  Worker · test        →  verified report back to you
+                    →  Reviewer (read-only)
+```
+
+You never manage the workers. You never chase a pane. You get evidence, not
+promises.
+
+**Good fit if you** run more than one coding agent, want a second pair of eyes
+on generated code, or need work split across projects without losing track of
+who changed what.
+
+> Independent community project. Not affiliated with Herdr, OpenAI, Anthropic, or xAI.
+
+## Install
+
+**Before you start** — macOS or Linux, plus:
+
+| Need | Get it |
+| --- | --- |
+| [Herdr](https://herdr.dev/) | `brew install herdr` |
+| `git`, `jq` | `brew install jq` (git usually present) |
+| One agent CLI, logged in | `claude`, `codex`, or `grok` — one is enough |
+
+Then a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
+hod status
+```
+
+Pin a release instead of tracking `main` — recommended for teams:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
+```
+
+That is the whole setup: nothing to rearrange, no per-project ceremony. `hod`
+clones the skill into `~/.hod/skill/`, puts the `hod` executable on
+`~/.local/bin/`, and links global adapters so every agent CLI can find it.
+Attach a single project instead with `hod install --project /path/to/repo`.
+
+Recommended next: `herdr integration install claude` (and `codex`) so the
+sidebar reports authoritative agent states rather than guesses.
+
+## Try it in two minutes
+
+```bash
+cd /path/to/your/project
+herdr                 # Herdr opens
+claude                # inside the pane — your controller
+```
+
+Paste this, naming Herdr and the skill (without both names the skill stays
+dormant):
+
+```text
+Use Herdr and the herdr-orchestrator skill to <a small, verifiable task>.
+One writer, one read-only reviewer. Do not commit or push.
+Return changed files, real test results, and unresolved questions.
+```
+
+**It is working when new panes appear in the Herdr sidebar.** Watch the status
+dots: 🟡 working (leave it alone) · 🔴 blocked (it needs you — read that pane,
+but answer in the controller's pane) · 🟢 idle. Detach any time with `ctrl+b`
+then `q`; nothing dies.
+
+Step-by-step version: [Quickstart](docs/quickstart.md) ·
+[Getting started](docs/getting-started.md).
+
+## Under the hood
+
+`hod` ships as two deliberately separate parts:
 
 | Part | What it is | What it does |
 | --- | --- | --- |
@@ -35,32 +119,6 @@ It ships as two deliberately separate parts:
 
 This split is intentional: *code does the mechanical work, the LLM does the
 judgment work* — and neither pretends to do the other's job.
-
-> Independent community project. Not affiliated with Herdr, OpenAI, Anthropic, or xAI.
-
-## Install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
-hod status
-```
-
-Pin a version instead of tracking `main`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
-```
-
-That is the whole setup: no workspace layout to rearrange, no per-project
-ceremony. `hod` clones the skill into `~/.hod/skill/`, puts the `hod`
-executable on `~/.local/bin/`, and links global adapters so every agent CLI
-can find the skill. Attach a single project instead with
-`hod install --project /path/to/repo`.
-
-**Prerequisites**: macOS or Linux · [Herdr](https://herdr.dev/) · `git`, `jq` ·
-at least one agent CLI installed and authenticated (`claude`, `codex`, or
-`grok`). Recommended: `herdr integration install claude` (and `codex`) so the
-sidebar shows authoritative agent states.
 
 ## How it works
 

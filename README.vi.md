@@ -26,7 +26,91 @@
 agent khác thông qua [Herdr](https://herdr.dev/), kiểm chứng kết quả bằng
 bằng chứng thật, và báo cáo lại kèm những câu hỏi chỉ bạn mới trả lời được.
 
-Dự án gồm hai phần được tách bạch có chủ đích:
+## Đây là gì?
+
+Chạy nhiều AI coding agent cùng lúc thì dễ. Quản chúng mới khó — bạn có cả
+chục tab terminal, không biết con nào đang chờ mình, và cũng không biết chữ
+"xong" của nó có nghĩa là code chạy được hay không.
+
+`hod` cho bạn **một agent duy nhất để nói chuyện**. Bạn mô tả điều mình muốn;
+nó lập kế hoạch, chia việc cho các agent khác trong pane
+[Herdr](https://herdr.dev/) riêng, đối chiếu kết quả với diff thật và lần chạy
+test thật, rồi quay lại với một câu trả lời — kèm danh sách những gì chỉ bạn
+mới quyết được.
+
+```text
+Bạn  →  Controller  →  Worker · code
+                    →  Worker · test        →  báo cáo có kiểm chứng về bạn
+                    →  Reviewer (read-only)
+```
+
+Bạn không phải quản worker. Không phải chạy theo từng pane. Bạn nhận bằng
+chứng, không phải lời hứa.
+
+**Hợp với bạn nếu** bạn chạy nhiều hơn một coding agent, muốn có thêm một
+cặp mắt soi code do AI sinh ra, hoặc cần chia việc qua nhiều dự án mà không
+mất dấu ai đã sửa gì.
+
+> Dự án cộng đồng độc lập. Không liên kết với Herdr, OpenAI, Anthropic, hay xAI.
+
+## Cài đặt
+
+**Cần có trước** — macOS hoặc Linux, cộng thêm:
+
+| Cần | Lấy ở đâu |
+| --- | --- |
+| [Herdr](https://herdr.dev/) | `brew install herdr` |
+| `git`, `jq` | `brew install jq` (git thường có sẵn) |
+| Một agent CLI đã đăng nhập | `claude`, `codex`, hoặc `grok` — một cái là đủ |
+
+Rồi chỉ một lệnh:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
+hod status
+```
+
+Ghim một bản phát hành thay vì bám `main` — khuyến nghị cho team:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
+```
+
+Chỉ vậy là xong: không phải sắp xếp lại thư mục, không thủ tục theo từng dự
+án. `hod` clone skill về `~/.hod/skill/`, đặt lệnh `hod` vào `~/.local/bin/`,
+và tạo adapter global để mọi agent CLI đều tìm thấy. Muốn gắn riêng một dự án:
+`hod install --project /đường/dẫn/repo`.
+
+Nên làm tiếp: `herdr integration install claude` (và `codex`) để sidebar báo
+trạng thái agent chính xác thay vì đoán.
+
+## Thử trong hai phút
+
+```bash
+cd /đường/dẫn/dự-án
+herdr                 # Herdr mở lên
+claude                # trong pane — đây là controller của bạn
+```
+
+Dán câu này, nhớ gọi tên Herdr **và** tên skill (thiếu một trong hai thì skill
+nằm im):
+
+```text
+Dùng Herdr và skill herdr-orchestrator để <một việc nhỏ kiểm chứng được>.
+Một writer, một reviewer read-only. Không commit, không push.
+Trả về file đã đổi, kết quả test thật, và câu hỏi tồn đọng.
+```
+
+**Chạy đúng khi sidebar Herdr mọc pane mới.** Nhìn chấm trạng thái: 🟡 đang
+làm (kệ nó) · 🔴 đang chờ bạn (đọc pane đó, nhưng trả lời trong pane của
+controller) · 🟢 rảnh. Muốn thoát ra thì `ctrl+b` rồi `q`; không có gì chết cả.
+
+Bản từng bước: [Quickstart](docs/quickstart.md) ·
+[Getting started](docs/getting-started.md).
+
+## Bên trong có gì
+
+`hod` gồm hai phần được tách bạch có chủ đích:
 
 | Phần | Là gì | Làm gì |
 | --- | --- | --- |
@@ -35,31 +119,6 @@ Dự án gồm hai phần được tách bạch có chủ đích:
 
 Việc tách đôi này là cố ý: *code làm việc máy móc, LLM làm việc phán đoán* —
 không bên nào giả vờ làm việc của bên kia.
-
-> Dự án cộng đồng độc lập. Không liên kết với Herdr, OpenAI, Anthropic, hay xAI.
-
-## Cài đặt
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
-hod status
-```
-
-Ghim một phiên bản thay vì bám theo `main`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
-```
-
-Chỉ vậy là xong: không phải sắp xếp lại thư mục, không thủ tục theo từng dự
-án. `hod` clone skill về `~/.hod/skill/`, đặt lệnh `hod` vào `~/.local/bin/`,
-và tạo adapter global để mọi agent CLI đều thấy skill. Muốn gắn riêng một dự
-án: `hod install --project /đường/dẫn/repo`.
-
-**Yêu cầu**: macOS hoặc Linux · [Herdr](https://herdr.dev/) · `git`, `jq` ·
-ít nhất một agent CLI đã cài và đăng nhập (`claude`, `codex`, hoặc `grok`).
-Khuyến nghị: `herdr integration install claude` (và `codex`) để sidebar hiển
-thị trạng thái agent chính xác.
 
 ## Cách hoạt động
 
