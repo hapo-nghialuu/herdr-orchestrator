@@ -38,11 +38,9 @@ nó lập kế hoạch, chia việc cho các agent khác trong pane
 test thật, rồi quay lại với một câu trả lời — kèm danh sách những gì chỉ bạn
 mới quyết được.
 
-```text
-Bạn  →  Controller  →  Worker · code
-                    →  Worker · test        →  báo cáo có kiểm chứng về bạn
-                    →  Reviewer (read-only)
-```
+<p align="center">
+  <img src="assets/hod-flow-vi.svg" alt="Bạn → controller → workers → bằng chứng quay về" width="880">
+</p>
 
 Bạn không phải quản worker. Không phải chạy theo từng pane. Bạn nhận bằng
 chứng, không phải lời hứa.
@@ -121,10 +119,6 @@ Việc tách đôi này là cố ý: *code làm việc máy móc, LLM làm việ
 không bên nào giả vờ làm việc của bên kia.
 
 ## Cách hoạt động
-
-<p align="center">
-  <img src="assets/hod-flow-vi.svg" alt="Bạn → controller → workers → bằng chứng quay về" width="900">
-</p>
 
 1. **Bạn chỉ nói chuyện với một agent.** Trong pane Herdr, gọi tên skill một
    cách tường minh:
@@ -304,6 +298,170 @@ herdr-orchestrator/
 - Herdr đang pre-1.0; dự án bám bản stable hiện tại (đã kiểm chứng với
   0.7.5), kèm đường tương thích best-effort cho 0.7.1.
 - Windows native chưa được kiểm thử.
+
+## Phụ lục
+
+<details>
+<summary><b>A. Thuật ngữ — các từ dự án này dùng</b></summary>
+
+| Thuật ngữ | Nghĩa |
+| --- | --- |
+| **Herdr** | Terminal multiplexer mà mọi thứ chạy bên trong. Nó cho mỗi agent một pane thật, nhận diện trạng thái, và mở API điều khiển. Không thuộc dự án này |
+| **Pane** | Một ô terminal trong Herdr. Mỗi pane một agent tương tác |
+| **Workspace** | Một nhóm tab và pane, thường mỗi dự án một cái |
+| **Controller** | Agent duy nhất bạn nói chuyện. Lập kế hoạch, giao việc, kiểm chứng, báo cáo. Không viết code |
+| **Worker** | Agent mà controller thuê cho một task cụ thể. Khởi động với context trống |
+| **Reviewer** | Worker read-only soi diff. Luôn là session mới — không bao giờ là agent đã viết code đó |
+| **Kind** | Agent thuộc CLI nào: `claude`, `codex`, `grok`, … |
+| **Adapter** | Symlink giúp CLI nhìn thấy skill (`~/.claude/skills/herdr-orchestrator`) |
+| **Profile** | File settings gỡ bớt tool của worker, cưỡng chế vai ngay ở tầng harness |
+| **Sentinel** | Token duy nhất in ra sau mỗi lệnh, để chữ cũ trên màn hình không bị nhầm là kết quả mới |
+| **Ledger** | Sổ nội bộ của controller: ai sở hữu file nào, worker nào đang ở trạng thái gì |
+| **Preflight** | Các kiểm tra controller chạy trước khi đụng vào gì: đúng môi trường, server tương thích, lệnh đã biết |
+
+</details>
+
+<details>
+<summary><b>B. Bảng tra lệnh nhanh</b></summary>
+
+**Cài đặt và sức khỏe hệ thống**
+
+```bash
+hod status                         # mọi thứ đã nối đúng chưa?
+hod doctor                         # như trên, kèm cách sửa từng lỗi
+hod update                         # kéo skill mới nhất (hoặc tag mới nhất nếu đang pin)
+hod install --project <path>       # gắn một dự án
+hod settings install               # ghi profile theo vai vào dự án
+hod uninstall [--purge]            # chỉ gỡ link do hod quản lý
+```
+
+**Herdr, dùng hằng ngày**
+
+```bash
+herdr                              # mở hoặc gắn lại phiên
+herdr agent list                   # mọi agent đang sống và trạng thái
+herdr worktree create --cwd <repo> --branch <tên> --no-focus
+herdr integration status           # trạng thái agent có đáng tin không?
+```
+
+Thoát ra bằng `ctrl+b` rồi `q`. Không có gì dừng chạy.
+
+**Tự tay khởi động worker** (bình thường controller làm hộ bạn)
+
+```bash
+split=$(herdr pane split --current --direction right --cwd "$PWD" --no-focus)
+pane=$(printf '%s\n' "$split" | jq -er '.result.pane.pane_id')
+herdr agent start impl --kind claude --pane "$pane" \
+  -- --settings .claude/settings.impl.json
+```
+
+</details>
+
+<details>
+<summary><b>C. Các mẫu prompt hiệu quả</b></summary>
+
+**Một task, có kiểm chứng** — mặc định dùng hằng ngày:
+
+```text
+Dùng Herdr và skill herdr-orchestrator để <kết quả mong muốn>.
+Một writer, một reviewer read-only. Không commit, không push.
+Trả về file đã đổi, kết quả test thật, và câu hỏi tồn đọng.
+```
+
+**Coordinator-only nghiêm ngặt** — khi muốn controller không đụng gì:
+
+```text
+Chạy coordinator-only: không tự tạo hay sửa file nào. Giao mọi thay đổi cho
+worker, kiểm chứng diff và các check của nó, và hỏi tôi khi một thay đổi nhỏ
+tới mức không đáng thuê worker.
+```
+
+**Chạy song song không giẫm chân** — chỉ khi các phần thực sự không chồng lấn:
+
+```text
+Chạy song song, mỗi việc một worker, quyền sở hữu file tách biệt:
+- <việc A> sở hữu <đường dẫn>
+- <việc B> sở hữu <đường dẫn>
+Không ai đụng manifest dùng chung; giao chúng cho một integrator duy nhất.
+```
+
+**Chỉ định kind và model tường minh:**
+
+```text
+Planner: codex, khởi động với -m <id> -c model_reasoning_effort=max
+Implementer: grok, khởi động với -m <id>
+Reviewer: claude, khởi động với --settings .claude/settings.reviewer.json
+Nếu CLI từ chối model nào, dừng lại hỏi tôi — đừng tự thay bằng model khác.
+```
+
+**Chỉnh hướng giữa chừng:**
+
+```text
+Ưu tiên bug production, tạm dừng phần tính năng.
+```
+
+```text
+Test fail trên Ubuntu với output sau: <bằng chứng>. Đọc lại các file liên
+quan, chỉ sửa đúng regression đã chứng minh, rồi chạy lại test.
+```
+
+</details>
+
+<details>
+<summary><b>D. Đọc sidebar</b></summary>
+
+| Chấm | Trạng thái | Nghĩa là gì | Bạn làm gì |
+| --- | --- | --- | --- |
+| 🟡 | `working` | Agent đang giữa lượt làm việc | Không làm gì. Đừng gửi thêm prompt — Herdr không theo dõi lượt, nó có thể trả lời nhầm yêu cầu |
+| 🔴 | `blocked` | Herdr thấy một prompt hỏi/xin phê duyệt | Mở pane đó để **đọc**, rồi trả lời trong pane của **controller** |
+| 🔵 | `done` | Xong rồi, chưa ai xem | Không làm gì — controller sẽ thu hoạch. `done` không phải bằng chứng code đúng |
+| 🟢 | `idle` | Rảnh, đang chờ | Không làm gì |
+| ⚪ | `unknown` | Herdr không phân loại được | Đừng bao giờ mặc định là xong; controller sẽ chạy `herdr agent explain` |
+
+**Phép thử quyết định:** điều phối thật làm **mọc pane mới**. Nếu CLI báo
+"background agents" mà sidebar đứng im, nó đang dùng sub-agent nội bộ của
+chính nó — không liên quan gì tới Herdr.
+
+</details>
+
+<details>
+<summary><b>E. Khi có trục trặc</b></summary>
+
+| Triệu chứng | Nguyên nhân thường gặp | Cách sửa |
+| --- | --- | --- |
+| Báo "requires a Herdr-managed pane" | Bạn mở CLI ngoài Herdr | Chạy `herdr` trước, rồi mở agent trong pane |
+| Skill không kích hoạt | Yêu cầu không gọi tên nó | Nhắc cả "Herdr" lẫn "herdr-orchestrator" |
+| Sidebar không hiện trạng thái của một agent | Kind đó chưa có integration | `herdr integration install <kind>` — riêng Grok không có |
+| `hod: command not found` | `~/.local/bin` chưa nằm trong `PATH` | Thêm dòng export mà `hod` đã in ra, mở terminal mới |
+| Profile theo vai không chặn được gì | Có kèm `--dangerously-skip-permissions` | Bỏ cờ đó — nó ghi đè mọi luật deny |
+| Worker có vẻ đứng im | Có thể nó đang blocked chứ không chết | Đọc pane của nó; nếu đang chờ quyết định, trả lời qua controller |
+| `hod update` từ chối chạy | Checkout skill có sửa đổi cục bộ | `cd ~/.hod/skill && git status`, rồi commit, stash, hoặc bỏ |
+
+Bắt đầu bằng `hod doctor` — nó chỉ đúng vấn đề và lệnh khắc phục. Hướng dẫn
+đầy đủ: [Troubleshooting](docs/troubleshooting.md). Đừng bao giờ restart server
+Herdr để "cho hết lỗi"; làm vậy giết luôn công việc đang chạy.
+
+</details>
+
+<details>
+<summary><b>F. Ranh giới an toàn, gom về một chỗ</b></summary>
+
+Những việc **không bao giờ** xảy ra nếu bạn chưa đồng ý:
+
+- Commit, push, merge, tag, publish, deploy
+- Xóa file, worktree, nhánh, pane, hay phiên mà task không tạo ra
+- Cài integration/plugin cho Herdr, đổi cấu hình, cập nhật Herdr
+- Dùng credential, mua bán, hay bất kỳ hành động nào hướng ra ngoài
+- Nới quyền cho worker, hay dùng việc ủy quyền để lấy thẩm quyền bạn chưa cấp
+
+Những việc bị chặn **về mặt cấu trúc**, không chỉ là lời khuyên:
+
+- Worker không thể khởi động thêm agent (trừ tầng controller trong portfolio mode, và bị chặn cứng ở hai tầng)
+- Profile theo vai gỡ hẳn tool khỏi agent — nó không thể dùng thứ nó không có
+- File policy nằm ngoài mọi checkout, nên không agent nào có quyền ghi repo lại tự nới quyền cho mình được
+- `hod uninstall` chỉ gỡ symlink trỏ về đúng checkout của chính nó
+
+</details>
 
 ## Đóng góp
 
