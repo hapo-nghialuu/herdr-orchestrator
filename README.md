@@ -19,12 +19,81 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
 </p>
 
+<p align="center">
+  <a href="#-get-started"><b>🚀 Get started</b></a> ·
+  <a href="#what-is-this">What is this?</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#the-hod-command">Commands</a> ·
+  <a href="#appendix">Appendix</a>
+</p>
+
 ---
 
-`hod` turns one coding-agent CLI — Claude Code, Codex, or Grok Build — into an
-**accountable controller** that plans, delegates to other agents through
-[Herdr](https://herdr.dev/), verifies their work with real evidence, and
-reports back with the questions only you can answer.
+# 🚀 Get started
+
+**Three steps. About five minutes.**
+
+### 1 · Prerequisites
+
+macOS or Linux, plus:
+
+| Need | Get it |
+| --- | --- |
+| [Herdr](https://herdr.dev/) | `brew install herdr` |
+| `git`, `jq` | `brew install jq` (git usually present) |
+| One agent CLI, logged in | `claude`, `codex`, or `grok` — one is enough |
+
+### 2 · Install `hod`
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
+hod status
+```
+
+<details>
+<summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
+```
+
+</details>
+
+That is the whole setup: nothing to rearrange, no per-project ceremony. `hod`
+clones the skill into `~/.hod/skill/`, puts the `hod` executable on
+`~/.local/bin/`, and links global adapters so every agent CLI can find it.
+Attach a single project instead with `hod install --project /path/to/repo`.
+
+Recommended next: `herdr integration install claude` (and `codex`) so the
+sidebar reports authoritative agent states rather than guesses.
+
+### 3 · Run your first orchestrated task
+
+```bash
+cd /path/to/your/project
+herdr                 # Herdr opens
+claude                # inside the pane — this is your controller
+```
+
+Paste this, naming **Herdr** and **herdr-orchestrator** — without both names
+the skill stays dormant:
+
+```text
+Use Herdr and the herdr-orchestrator skill to <a small, verifiable task>.
+One writer, one read-only reviewer. Do not commit or push.
+Return changed files, real test results, and unresolved questions.
+```
+
+> ✅ **It is working when new panes appear in the Herdr sidebar.**
+> Status dots: 🟡 working (leave it alone) · 🔴 blocked (it needs you — read
+> that pane, but answer in the controller's pane) · 🟢 idle.
+> Detach any time with `ctrl+b` then `q`; nothing dies.
+
+**Need more detail?** [Quickstart — four levels](docs/quickstart.md) ·
+[Getting started — six checked steps](docs/getting-started.md) ·
+[Troubleshooting](docs/troubleshooting.md)
+
+---
 
 ## What is this?
 
@@ -49,62 +118,6 @@ on generated code, or need work split across projects without losing track of
 who changed what.
 
 > Independent community project. Not affiliated with Herdr, OpenAI, Anthropic, or xAI.
-
-## Install
-
-**Before you start** — macOS or Linux, plus:
-
-| Need | Get it |
-| --- | --- |
-| [Herdr](https://herdr.dev/) | `brew install herdr` |
-| `git`, `jq` | `brew install jq` (git usually present) |
-| One agent CLI, logged in | `claude`, `codex`, or `grok` — one is enough |
-
-Then a single command:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
-hod status
-```
-
-Pin a release instead of tracking `main` — recommended for teams:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
-```
-
-That is the whole setup: nothing to rearrange, no per-project ceremony. `hod`
-clones the skill into `~/.hod/skill/`, puts the `hod` executable on
-`~/.local/bin/`, and links global adapters so every agent CLI can find it.
-Attach a single project instead with `hod install --project /path/to/repo`.
-
-Recommended next: `herdr integration install claude` (and `codex`) so the
-sidebar reports authoritative agent states rather than guesses.
-
-## Try it in two minutes
-
-```bash
-cd /path/to/your/project
-herdr                 # Herdr opens
-claude                # inside the pane — your controller
-```
-
-Paste this, naming Herdr and the skill (without both names the skill stays
-dormant):
-
-```text
-Use Herdr and the herdr-orchestrator skill to <a small, verifiable task>.
-One writer, one read-only reviewer. Do not commit or push.
-Return changed files, real test results, and unresolved questions.
-```
-
-**It is working when new panes appear in the Herdr sidebar.** Watch the status
-dots: 🟡 working (leave it alone) · 🔴 blocked (it needs you — read that pane,
-but answer in the controller's pane) · 🟢 idle. Detach any time with `ctrl+b`
-then `q`; nothing dies.
-
-Step-by-step version: [Quickstart](docs/quickstart.md) ·
-[Getting started](docs/getting-started.md).
 
 ## Under the hood
 
