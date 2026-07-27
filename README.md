@@ -37,11 +37,9 @@ the work, hands pieces to other agents in their own [Herdr](https://herdr.dev/)
 panes, checks their output against real diffs and real test runs, and comes
 back with one answer — plus a list of anything only you can decide.
 
-```text
-You  →  Controller  →  Worker · code
-                    →  Worker · test        →  verified report back to you
-                    →  Reviewer (read-only)
-```
+<p align="center">
+  <img src="assets/hod-flow-en.svg" alt="You → controller → workers → verified evidence back" width="880">
+</p>
 
 You never manage the workers. You never chase a pane. You get evidence, not
 promises.
@@ -121,10 +119,6 @@ This split is intentional: *code does the mechanical work, the LLM does the
 judgment work* — and neither pretends to do the other's job.
 
 ## How it works
-
-<p align="center">
-  <img src="assets/hod-flow-en.svg" alt="You → controller → workers → evidence back" width="900">
-</p>
 
 1. **You speak to one agent.** Inside a Herdr pane, name the skill explicitly:
 
@@ -307,6 +301,170 @@ herdr-orchestrator/
 - Herdr is pre-1.0; this project tracks current stable (tested against 0.7.5)
   with a best-effort legacy path for 0.7.1.
 - Native Windows is untested.
+
+## Appendix
+
+<details>
+<summary><b>A. Glossary — the words this project uses</b></summary>
+
+| Term | Meaning |
+| --- | --- |
+| **Herdr** | The terminal multiplexer everything runs inside. It gives each agent a real pane, detects its state, and exposes a control API. Not part of this project |
+| **Pane** | One terminal window inside Herdr. One interactive agent per pane |
+| **Workspace** | A group of tabs and panes, normally one per project |
+| **Controller** | The one agent you talk to. Plans, delegates, verifies, reports. Writes no code |
+| **Worker** | An agent the controller hires for one scoped task. Starts with an empty context |
+| **Reviewer** | A read-only worker that inspects a diff. Always a fresh session — never the agent that wrote the code |
+| **Kind** | Which CLI an agent is: `claude`, `codex`, `grok`, … |
+| **Adapter** | The symlink that makes the skill visible to a CLI (`~/.claude/skills/herdr-orchestrator`) |
+| **Profile** | A settings file that removes tools from a worker, enforcing its role at the harness level |
+| **Sentinel** | A unique token printed after a command so old text on screen can never be mistaken for a fresh result |
+| **Ledger** | The controller's internal record of who owns which files, and each worker's state |
+| **Preflight** | The checks the controller runs before touching anything: right environment, compatible server, known commands |
+
+</details>
+
+<details>
+<summary><b>B. Command cheat sheet</b></summary>
+
+**Setup and health**
+
+```bash
+hod status                         # is everything wired up?
+hod doctor                         # same, plus the fix for each problem
+hod update                         # pull the newest skill (or newest tag if pinned)
+hod install --project <path>       # attach one project
+hod settings install               # write role profiles into a project
+hod uninstall [--purge]            # remove hod-managed links only
+```
+
+**Herdr, day to day**
+
+```bash
+herdr                              # open or reattach the session
+herdr agent list                   # every live agent and its state
+herdr worktree create --cwd <repo> --branch <name> --no-focus
+herdr integration status           # is agent-state detection authoritative?
+```
+
+Detach with `ctrl+b` then `q`. Nothing stops running.
+
+**Starting a worker by hand** (the controller normally does this for you)
+
+```bash
+split=$(herdr pane split --current --direction right --cwd "$PWD" --no-focus)
+pane=$(printf '%s\n' "$split" | jq -er '.result.pane.pane_id')
+herdr agent start impl --kind claude --pane "$pane" \
+  -- --settings .claude/settings.impl.json
+```
+
+</details>
+
+<details>
+<summary><b>C. Prompt patterns that work</b></summary>
+
+**One task, verified** — the everyday default:
+
+```text
+Use Herdr and the herdr-orchestrator skill to <outcome>.
+One writer, one read-only reviewer. Do not commit or push.
+Return changed files, real test results, and unresolved questions.
+```
+
+**Strict coordinator-only** — when you want the controller to touch nothing:
+
+```text
+Run coordinator-only: do not create or edit any file yourself. Delegate every
+change to a worker, verify its diff and checks, and ask me when a change seems
+too small to be worth a worker.
+```
+
+**Parallel, non-colliding work** — only when the pieces truly do not overlap:
+
+```text
+Run these in parallel, one worker each, with disjoint file ownership:
+- <task A> owns <paths>
+- <task B> owns <paths>
+Nobody touches shared manifests; assign those to a single integrator.
+```
+
+**Choosing kinds and models explicitly:**
+
+```text
+Planner: codex, started with -m <id> -c model_reasoning_effort=max
+Implementer: grok, started with -m <id>
+Reviewer: claude, started with --settings .claude/settings.reviewer.json
+If a CLI rejects a model, stop and ask me — do not substitute another.
+```
+
+**Steering mid-flight:**
+
+```text
+Prioritise the production bug and pause the feature work.
+```
+
+```text
+The test failed on Ubuntu with this output: <evidence>. Re-read the affected
+files, fix only the demonstrated regression, and rerun the test.
+```
+
+</details>
+
+<details>
+<summary><b>D. Reading the sidebar</b></summary>
+
+| Dot | State | What it means | What you do |
+| --- | --- | --- | --- |
+| 🟡 | `working` | The agent is mid-turn | Nothing. Do not send another prompt — Herdr does not track turns, so it may answer the wrong request |
+| 🔴 | `blocked` | Herdr saw an approval or question prompt | Open the pane to **read** it, then answer in the **controller's** pane |
+| 🔵 | `done` | Finished, nobody has looked yet | Nothing — the controller harvests it. `done` is not proof the work is correct |
+| 🟢 | `idle` | Free and waiting | Nothing |
+| ⚪ | `unknown` | Herdr cannot classify it | Never assume success; the controller runs `herdr agent explain` |
+
+**The litmus test:** real orchestration makes **new panes appear**. If a CLI
+reports "background agents" while the sidebar stays still, it is using its own
+internal sub-agents — no Herdr involved.
+
+</details>
+
+<details>
+<summary><b>E. When something goes wrong</b></summary>
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| "requires a Herdr-managed pane" | You started the CLI outside Herdr | Run `herdr` first, start the agent inside a pane |
+| Skill never activates | The request did not name it | Say both "Herdr" and "herdr-orchestrator" |
+| Sidebar shows no state for an agent | No integration for that kind | `herdr integration install <kind>` — Grok has none by design |
+| `hod: command not found` | `~/.local/bin` is not on `PATH` | Add the export line `hod` printed, open a new terminal |
+| A role profile is not enforcing | `--dangerously-skip-permissions` was also passed | Drop that flag — it overrides every deny rule |
+| Worker seems stuck | It may be blocked, not dead | Read its pane; if it is waiting on a decision, answer through the controller |
+| `hod update` refuses | The skill checkout has local edits | `cd ~/.hod/skill && git status`, then commit, stash, or discard |
+
+Start with `hod doctor` — it names the problem and the command that fixes it.
+Full guide: [Troubleshooting](docs/troubleshooting.md). Never restart the Herdr
+server to "clear" a problem; it kills work that is still running.
+
+</details>
+
+<details>
+<summary><b>F. Safety boundaries, in one place</b></summary>
+
+Things that **never** happen without your say-so:
+
+- Commit, push, merge, tag, publish, deploy
+- Deleting files, worktrees, branches, panes, or sessions the task did not create
+- Installing Herdr integrations or plugins, changing configuration, updating Herdr
+- Using credentials, making purchases, or any externally visible action
+- Widening a worker's permissions, or using delegation to obtain authority you did not grant
+
+Things that are **structurally** prevented, not merely discouraged:
+
+- A worker cannot start more agents (except the controller tier in portfolio mode, capped at two levels)
+- A role profile removes tools from the agent — it cannot use what it does not have
+- Policy files live outside every checkout, so no agent with repository write access can widen its own authority
+- `hod uninstall` only removes symlinks that resolve into its own checkout
+
+</details>
 
 ## Contributing
 
