@@ -84,6 +84,23 @@ Một writer, một reviewer read-only. Không commit, không push.
 Trả về file đã đổi, kết quả test thật, và câu hỏi tồn đọng.
 ```
 
+<details>
+<summary>Các cách gọi khác, theo từng CLI</summary>
+
+| CLI | Cách gọi | Ghi chú |
+| --- | --- | --- |
+| Claude Code | `/herdr-orchestrator` | Slash command; nạp skill trước, rồi mới mô tả việc |
+| Codex | `$herdr-orchestrator` | Cùng ý tưởng, dùng tiền tố của Codex |
+| Grok Build | yêu cầu thường | Nói rõ là muốn dùng skill `herdr-orchestrator` |
+| Mọi CLI | gọi tên trong câu yêu cầu | Ví dụ ở trên — chạy được ở đâu cũng được, không cần tiền tố |
+
+Nạp skill bằng lệnh rồi mô tả việc, hay viết thẳng vào câu yêu cầu — hai cách
+về cùng một chỗ. Dạng tiền tố đỡ phải nhắc lại tên skill; dạng viết thẳng thì
+đỡ phải nhớ thêm cú pháp. Kiểu nào thì bản thân task vẫn cần nêu rõ kết quả
+mong muốn, vai trò, và bằng chứng bạn muốn nhận lại.
+
+</details>
+
 > ✅ **Chạy đúng khi sidebar Herdr mọc pane mới.**
 > Chấm trạng thái: 🟡 đang làm (kệ nó) · 🔴 đang chờ bạn (đọc pane đó, nhưng
 > trả lời trong pane của controller) · 🟢 rảnh.

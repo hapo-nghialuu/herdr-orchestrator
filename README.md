@@ -84,6 +84,23 @@ One writer, one read-only reviewer. Do not commit or push.
 Return changed files, real test results, and unresolved questions.
 ```
 
+<details>
+<summary>Other ways to invoke it, per CLI</summary>
+
+| CLI | Invocation | Notes |
+| --- | --- | --- |
+| Claude Code | `/herdr-orchestrator` | Slash command; loads the skill up front, then describe the task |
+| Codex | `$herdr-orchestrator` | Same idea with Codex's prefix |
+| Grok Build | plain request | Ask explicitly to use the `herdr-orchestrator` skill |
+| Any | naming it in the request | The example above — works everywhere, no prefix needed |
+
+Loading the skill by command and describing the task in plain words reach the
+same place. The prefix forms save you from repeating the skill name; the plain
+request is one less thing to remember. Either way the task itself still needs
+the outcome, the roles, and what evidence you expect back.
+
+</details>
+
 > ✅ **It is working when new panes appear in the Herdr sidebar.**
 > Status dots: 🟡 working (leave it alone) · 🔴 blocked (it needs you — read
 > that pane, but answer in the controller's pane) · 🟢 idle.

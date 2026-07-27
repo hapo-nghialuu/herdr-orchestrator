@@ -128,6 +128,17 @@ Return changed files, real test results, and unresolved questions.
 The controller runs its preflight, splits panes, starts workers, verifies their
 output, and reports back.
 
+Two equivalent ways to reach the skill:
+
+| Style | Claude Code | Codex | Grok Build |
+| --- | --- | --- | --- |
+| Load by command, then describe the task | `/herdr-orchestrator` | `$herdr-orchestrator` | — |
+| Name it inside the request | works everywhere, as above | | |
+
+The command form saves repeating the name; the plain request is one less
+thing to remember. Either way the task still needs its outcome, roles, and
+the evidence you expect back.
+
 ✅ **New panes appear in the Herdr sidebar** when it hires workers. If you only
 see "background agents" messages while the sidebar stays still, the CLI is
 using its own internal sub-agents rather than Herdr orchestration — restate the
