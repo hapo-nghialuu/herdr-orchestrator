@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.1
+HOD_VERSION=0.1.2
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/herdr-orchestrator.git}"
 
 usage() {
