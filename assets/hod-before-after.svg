@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 720" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+  <rect width="1440" height="720" fill="#0d1220"/>
+
+  <!-- ═══ TRƯỚC ═══ -->
+  <text x="60" y="62" fill="#8b98b8" font-size="15" letter-spacing="3">TRƯỚC</text>
+  <text x="60" y="98" fill="#e6edf3" font-size="26" font-weight="bold">Bạn chạy theo từng agent</text>
+
+  <!-- cửa sổ lộn xộn, không có trạng thái -->
+  <g opacity="0.9">
+    <rect x="60" y="140" width="215" height="96" rx="10" fill="#131c31" stroke="#3d4763" stroke-width="1.5"/>
+    <text x="80" y="172" fill="#6b7691" font-size="13">&gt; agent 1</text>
+    <text x="80" y="200" fill="#4a5470" font-size="12">...</text>
+
+    <rect x="305" y="168" width="215" height="96" rx="10" fill="#131c31" stroke="#3d4763" stroke-width="1.5"/>
+    <text x="325" y="200" fill="#6b7691" font-size="13">&gt; agent 2</text>
+    <text x="325" y="228" fill="#4a5470" font-size="12">...</text>
+
+    <rect x="90" y="272" width="215" height="96" rx="10" fill="#131c31" stroke="#3d4763" stroke-width="1.5"/>
+    <text x="110" y="304" fill="#6b7691" font-size="13">&gt; agent 3</text>
+    <text x="110" y="332" fill="#4a5470" font-size="12">...</text>
+
+    <rect x="340" y="300" width="215" height="96" rx="10" fill="#131c31" stroke="#3d4763" stroke-width="1.5"/>
+    <text x="360" y="332" fill="#6b7691" font-size="13">&gt; agent 4</text>
+    <text x="360" y="360" fill="#4a5470" font-size="12">...</text>
+  </g>
+
+  <!-- câu hỏi không lời đáp -->
+  <text x="70" y="452" fill="#e05252" font-size="16">?  con nào đang chờ mình</text>
+  <text x="70" y="490" fill="#e05252" font-size="16">?  "xong rồi" là xong thật chưa</text>
+  <text x="70" y="528" fill="#e05252" font-size="16">?  ai vừa sửa file này</text>
+  <text x="70" y="566" fill="#e05252" font-size="16">?  test pass hay là chữ cũ trên màn hình</text>
+
+  <text x="70" y="632" fill="#8b98b8" font-size="15">Mở 4 tab, nhớ 4 ngữ cảnh, tin 4 lời khai.</text>
+
+  <!-- ═══ vạch chia ═══ -->
+  <line x1="720" y1="40" x2="720" y2="680" stroke="#2a3350" stroke-width="1.5"/>
+
+  <!-- ═══ SAU ═══ -->
+  <text x="790" y="62" fill="#f0b429" font-size="15" letter-spacing="3">SAU</text>
+  <text x="790" y="98" fill="#e6edf3" font-size="26" font-weight="bold">Bạn nói chuyện với một agent</text>
+
+  <!-- sidebar trạng thái -->
+  <rect x="790" y="140" width="230" height="228" rx="10" fill="#111a2e" stroke="#2a3350" stroke-width="1.5"/>
+  <text x="808" y="168" fill="#6b7691" font-size="12" letter-spacing="1.5">SIDEBAR</text>
+  <circle cx="816" cy="200" r="6" fill="#f0b429"/>
+  <text x="834" y="205" fill="#c9d3e6" font-size="14">controller</text>
+  <circle cx="816" cy="238" r="6" fill="#e3b341"/>
+  <text x="834" y="243" fill="#c9d3e6" font-size="14">code · đang làm</text>
+  <circle cx="816" cy="276" r="6" fill="#e05252"/>
+  <text x="834" y="281" fill="#c9d3e6" font-size="14">test · chờ bạn</text>
+  <circle cx="816" cy="314" r="6" fill="#3fb950"/>
+  <text x="834" y="319" fill="#c9d3e6" font-size="14">review · xong</text>
+  <text x="808" y="352" fill="#6b7691" font-size="12">liếc một cái là biết</text>
+
+  <!-- pane controller -->
+  <rect x="1050" y="140" width="330" height="228" rx="12" fill="#131c31" stroke="#f0b429" stroke-width="2.5"/>
+  <text x="1072" y="176" fill="#f0b429" font-size="15" font-weight="bold">controller</text>
+  <text x="1072" y="212" fill="#c9d3e6" font-size="13">&gt; sửa bug X, một writer,</text>
+  <text x="1085" y="236" fill="#c9d3e6" font-size="13">  một reviewer read-only</text>
+  <line x1="1072" y1="258" x2="1358" y2="258" stroke="#2a3350" stroke-width="1"/>
+  <text x="1072" y="286" fill="#8b98b8" font-size="13">đang giao việc, chờ,</text>
+  <text x="1072" y="310" fill="#8b98b8" font-size="13">kiểm chứng, tổng hợp...</text>
+  <text x="1072" y="344" fill="#6b7691" font-size="12">bạn chỉ gõ ở đây</text>
+
+  <!-- kết quả -->
+  <text x="790" y="452" fill="#3fb950" font-size="16">✓  3 file đã đổi, kèm diff thật</text>
+  <text x="790" y="490" fill="#3fb950" font-size="16">✓  npm test — 41 passed, exit 0</text>
+  <text x="790" y="528" fill="#3fb950" font-size="16">✓  reviewer: 2 finding kèm file:dòng</text>
+  <text x="790" y="566" fill="#f0b429" font-size="16">?  1 câu cần bạn quyết: có commit không</text>
+
+  <text x="790" y="632" fill="#8b98b8" font-size="15">Một chỗ để gõ. Bằng chứng, không phải lời hứa.</text>
+</svg>
