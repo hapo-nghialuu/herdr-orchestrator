@@ -25,7 +25,7 @@ concepts involved.
 Install the skill once:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/herdr-orchestrator/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
 hod status
 ```
 

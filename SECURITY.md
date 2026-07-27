@@ -7,7 +7,7 @@ history, unpublished repository content, or a working exploit against another
 user's environment.
 
 Use this repository's private
-[security advisory form](https://github.com/hapo-nghialuu/herdr-orchestrator/security/advisories/new).
+[security advisory form](https://github.com/hapo-nghialuu/hod/security/advisories/new).
 Private vulnerability reporting is enabled before the first public release.
 Include the smallest reproducible description, affected files or commands,
 expected security boundary, observed behavior, and a redacted proof of impact.
