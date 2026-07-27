@@ -102,6 +102,40 @@ version: never route around a denied tool by shelling out or handing the action
 to another agent. Boundaries are fixed when the agent starts and cannot be
 tightened mid-session — to change a worker's role, start a new agent.
 
+### Discover existing profiles before starting anything
+
+A profile only takes effect when it is passed at start. A worker launched as a
+bare `claude` in a project that ships `settings.impl.json` runs without the
+model, endpoint, and permissions the user configured — silently, because
+nothing fails. Treat that as a defect, not a default.
+
+Before creating the team, list what the project already provides:
+
+```bash
+ls "$project_dir"/.claude/settings.*.json 2>/dev/null
+```
+
+Then apply what you find:
+
+- Map each role to the profile whose name matches it — `settings.impl.json`
+  for an implementer, `settings.reviewer.json` for a reviewer,
+  `settings.controller.json` for a controller — and pass it after `--`:
+  `-- --settings .claude/settings.impl.json`.
+- A profile that exists but matches no role in this team is not an
+  instruction to invent one; leave it alone.
+- A role with no matching profile starts without one. That is normal: do not
+  substitute a different role's profile, and never create a profile file
+  yourself. Profiles are user-authored.
+- When the user names a profile explicitly, use exactly that path. If it does
+  not exist, stop and say so rather than starting the worker bare.
+- State in the final report which profile each worker started with, or that it
+  started without one. A silent omission is how a misconfigured run stays
+  invisible.
+
+The same reasoning applies to any configuration path the user has already
+written: it expresses intent, and a worker that ignores it is not running the
+task the user asked for.
+
 ## Compose the full start command
 
 Model, context revival, and role boundary are independent axes; a real start
