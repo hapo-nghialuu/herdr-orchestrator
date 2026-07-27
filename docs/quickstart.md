@@ -41,6 +41,11 @@ results, and unresolved questions.
 The controller runs a preflight, splits panes, starts workers, verifies their
 output, and reports back with evidence.
 
+If you prefer, load the skill by command first and then describe the task:
+`/herdr-orchestrator` in Claude Code, `$herdr-orchestrator` in Codex. Both
+reach the same place as naming it in the sentence — the prefix just saves you
+from repeating the name.
+
 **You know it works when:** new panes appear in the sidebar. If you only see
 "background agents" messages and the sidebar stays empty, the CLI is using its
 internal sub-agents — not Herdr orchestration; restate the request with the
