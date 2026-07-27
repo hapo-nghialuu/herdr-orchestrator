@@ -19,12 +19,81 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
 </p>
 
+<p align="center">
+  <a href="#-bắt-đầu"><b>🚀 Bắt đầu</b></a> ·
+  <a href="#đây-là-gì">Đây là gì?</a> ·
+  <a href="#cách-hoạt-động">Cách hoạt động</a> ·
+  <a href="#lệnh-hod">Lệnh</a> ·
+  <a href="#phụ-lục">Phụ lục</a>
+</p>
+
 ---
 
-`hod` biến một coding-agent CLI — Claude Code, Codex, hoặc Grok Build — thành
-**controller chịu trách nhiệm duy nhất**: lập kế hoạch, giao việc cho các
-agent khác thông qua [Herdr](https://herdr.dev/), kiểm chứng kết quả bằng
-bằng chứng thật, và báo cáo lại kèm những câu hỏi chỉ bạn mới trả lời được.
+# 🚀 Bắt đầu
+
+**Ba bước. Khoảng năm phút.**
+
+### 1 · Cần có trước
+
+macOS hoặc Linux, cộng thêm:
+
+| Cần | Lấy ở đâu |
+| --- | --- |
+| [Herdr](https://herdr.dev/) | `brew install herdr` |
+| `git`, `jq` | `brew install jq` (git thường có sẵn) |
+| Một agent CLI đã đăng nhập | `claude`, `codex`, hoặc `grok` — một cái là đủ |
+
+### 2 · Cài `hod`
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
+hod status
+```
+
+<details>
+<summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
+```
+
+</details>
+
+Chỉ vậy là xong: không phải sắp xếp lại thư mục, không thủ tục theo từng dự
+án. `hod` clone skill về `~/.hod/skill/`, đặt lệnh `hod` vào `~/.local/bin/`,
+và tạo adapter global để mọi agent CLI đều tìm thấy. Muốn gắn riêng một dự án:
+`hod install --project /đường/dẫn/repo`.
+
+Nên làm tiếp: `herdr integration install claude` (và `codex`) để sidebar báo
+trạng thái agent chính xác thay vì đoán.
+
+### 3 · Chạy task điều phối đầu tiên
+
+```bash
+cd /đường/dẫn/dự-án
+herdr                 # Herdr mở lên
+claude                # trong pane — đây là controller của bạn
+```
+
+Dán câu này, nhớ gọi tên **Herdr** và **herdr-orchestrator** — thiếu một trong
+hai thì skill nằm im:
+
+```text
+Dùng Herdr và skill herdr-orchestrator để <một việc nhỏ kiểm chứng được>.
+Một writer, một reviewer read-only. Không commit, không push.
+Trả về file đã đổi, kết quả test thật, và câu hỏi tồn đọng.
+```
+
+> ✅ **Chạy đúng khi sidebar Herdr mọc pane mới.**
+> Chấm trạng thái: 🟡 đang làm (kệ nó) · 🔴 đang chờ bạn (đọc pane đó, nhưng
+> trả lời trong pane của controller) · 🟢 rảnh.
+> Muốn thoát ra thì `ctrl+b` rồi `q`; không có gì chết cả.
+
+**Muốn chi tiết hơn?** [Quickstart — 4 cấp độ](docs/quickstart.md) ·
+[Getting started — 6 bước có checkpoint](docs/getting-started.md) ·
+[Troubleshooting](docs/troubleshooting.md)
+
+---
 
 ## Đây là gì?
 
@@ -50,61 +119,6 @@ cặp mắt soi code do AI sinh ra, hoặc cần chia việc qua nhiều dự á
 mất dấu ai đã sửa gì.
 
 > Dự án cộng đồng độc lập. Không liên kết với Herdr, OpenAI, Anthropic, hay xAI.
-
-## Cài đặt
-
-**Cần có trước** — macOS hoặc Linux, cộng thêm:
-
-| Cần | Lấy ở đâu |
-| --- | --- |
-| [Herdr](https://herdr.dev/) | `brew install herdr` |
-| `git`, `jq` | `brew install jq` (git thường có sẵn) |
-| Một agent CLI đã đăng nhập | `claude`, `codex`, hoặc `grok` — một cái là đủ |
-
-Rồi chỉ một lệnh:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
-hod status
-```
-
-Ghim một bản phát hành thay vì bám `main` — khuyến nghị cho team:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
-```
-
-Chỉ vậy là xong: không phải sắp xếp lại thư mục, không thủ tục theo từng dự
-án. `hod` clone skill về `~/.hod/skill/`, đặt lệnh `hod` vào `~/.local/bin/`,
-và tạo adapter global để mọi agent CLI đều tìm thấy. Muốn gắn riêng một dự án:
-`hod install --project /đường/dẫn/repo`.
-
-Nên làm tiếp: `herdr integration install claude` (và `codex`) để sidebar báo
-trạng thái agent chính xác thay vì đoán.
-
-## Thử trong hai phút
-
-```bash
-cd /đường/dẫn/dự-án
-herdr                 # Herdr mở lên
-claude                # trong pane — đây là controller của bạn
-```
-
-Dán câu này, nhớ gọi tên Herdr **và** tên skill (thiếu một trong hai thì skill
-nằm im):
-
-```text
-Dùng Herdr và skill herdr-orchestrator để <một việc nhỏ kiểm chứng được>.
-Một writer, một reviewer read-only. Không commit, không push.
-Trả về file đã đổi, kết quả test thật, và câu hỏi tồn đọng.
-```
-
-**Chạy đúng khi sidebar Herdr mọc pane mới.** Nhìn chấm trạng thái: 🟡 đang
-làm (kệ nó) · 🔴 đang chờ bạn (đọc pane đó, nhưng trả lời trong pane của
-controller) · 🟢 rảnh. Muốn thoát ra thì `ctrl+b` rồi `q`; không có gì chết cả.
-
-Bản từng bước: [Quickstart](docs/quickstart.md) ·
-[Getting started](docs/getting-started.md).
 
 ## Bên trong có gì
 
