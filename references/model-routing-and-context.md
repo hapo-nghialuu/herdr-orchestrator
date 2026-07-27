@@ -126,6 +126,13 @@ Then apply what you find:
 - A role with no matching profile starts without one. That is normal: do not
   substitute a different role's profile, and never create a profile file
   yourself. Profiles are user-authored.
+- Some roles exist *because of* a boundary — a read-only reviewer, a
+  coordinator-only controller. When such a role starts without a profile, its
+  boundary is wording in a prompt, not something the harness can enforce: the
+  reviewer still holds the edit tools. Say so plainly in the report and
+  mention that `hod settings install` turns that role into an enforced one.
+  Do not run it, and do not refuse the work over it — the user decides
+  whether the softer boundary is acceptable for this task.
 - When the user names a profile explicitly, use exactly that path. If it does
   not exist, stop and say so rather than starting the worker bare.
 - State in the final report which profile each worker started with, or that it

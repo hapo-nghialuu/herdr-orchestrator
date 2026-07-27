@@ -27,6 +27,11 @@ Reading a diff or a test result to confirm scope and outcome remains the
 controller's own duty and is not review; see
 [Delegation and direct-user contract](delegation-and-direct-user-contract.md).
 
+A reviewer started without a read-only profile keeps its edit tools, so its
+read-only status rests on the prompt alone. That is workable, but say so in
+the report rather than presenting the review as harness-enforced; see
+[Model routing and context](model-routing-and-context.md).
+
 Report a cohesive verified outcome. Distinguish verified facts from worker
 claims and unresolved risk.
 
