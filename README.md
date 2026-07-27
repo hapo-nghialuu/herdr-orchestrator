@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <b>English</b> · <a href="README.vi.md">Tiếng Việt</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/hapo-nghialuu/herdr-orchestrator/actions/workflows/validate.yml"><img src="https://github.com/hapo-nghialuu/herdr-orchestrator/actions/workflows/validate.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/hapo-nghialuu/herdr-orchestrator/releases"><img src="https://img.shields.io/github/v/release/hapo-nghialuu/herdr-orchestrator" alt="release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue" alt="platform">
