@@ -1,114 +1,177 @@
 # Getting Started
 
-This guide installs Herdr Orchestrator into a sibling workspace, verifies the
-adapters, and starts the first controller session.
+Six steps from a clean machine to your first orchestrated session. Each step
+ends with a ✅ check — pass it before moving on.
 
-## 1. Understand the parts
+Already have Herdr and an agent CLI working? Jump to
+[step 5](#5-install-hod). Prefer the shortest possible path, with concepts
+introduced only as they become necessary? Read the
+[Quickstart](quickstart.md) instead.
 
-- **Herdr** provides persistent terminal panes, agent detection, lifecycle
-  state, and a local control API.
-- **The controller** is one Codex, Claude Code, or Grok Build session launched
-  inside Herdr.
-- **Workers** are additional coding-agent sessions started and addressed by the
-  controller.
-- **Herdr Orchestrator** is the skill that defines routing, authority,
-  verification, privacy, and cleanup behavior.
+## 1. Base tools
 
-The controller is the only integration owner. Herdr transports terminal input
-and state; it does not decide whether worker output is correct.
-
-## 2. Install prerequisites
-
-Install current stable Herdr on macOS or Linux:
+**macOS:**
 
 ```bash
-curl -fsSL https://herdr.dev/install.sh | sh
+xcode-select --install    # git, if you do not have it yet
+brew install jq
 ```
 
-Homebrew alternative:
+Install [Homebrew](https://brew.sh/) first if you do not have it.
+
+**Linux:**
+
+```bash
+sudo apt install -y git jq      # or dnf / pacman equivalents
+```
+
+✅ `git --version && jq --version` both print a version.
+
+## 2. Herdr
 
 ```bash
 brew install herdr
+# or: curl -fsSL https://herdr.dev/install.sh | sh
 ```
 
-Install Git and `jq` through your operating system package manager. Install and
-authenticate at least one controller CLI separately.
+Herdr provides the persistent panes, agent detection, and local control API
+that everything else builds on.
 
-Verify availability:
+✅ `herdr --version` prints `herdr 0.7.x` or newer.
+
+## 3. At least one agent CLI, authenticated
+
+Install the CLI you plan to use — one is enough, add others later:
 
 ```bash
-herdr --version
-git --version
-jq --version
-command -v codex || true
-command -v claude || true
-command -v grok || true
+npm install -g @anthropic-ai/claude-code   # Claude Code
+brew install --cask codex                  # Codex
+# Grok Build: follow xAI's official installer
 ```
 
-Missing optional CLIs are acceptable. Do not request a worker kind that is not
-installed and supported by local Herdr help. Any other kind listed by
-`herdr agent start --help` works the same way when its CLI is installed.
+Run each one once (`claude`, `codex`, `grok`) to complete its own login flow.
+If your team shares a proxy or model configuration, this is the moment to copy
+that `~/.claude/settings.json` shape — **never** someone else's token; each
+person supplies their own.
 
-Install the Herdr integration for each agent CLI you plan to run
-(recommended):
+✅ `command -v claude` (and/or `codex`, `grok`) resolves, and launching it does
+not prompt for login again.
+
+## 4. Herdr integrations
 
 ```bash
 herdr integration install claude
-herdr integration install codex
-herdr integration status
+herdr integration install codex     # if you use codex
 ```
 
-Without an integration, Herdr detects agent state from screen output
-(heuristic). With one, lifecycle state comes from an authoritative source, so
-the sidebar and every `agent wait` become more reliable. Install integrations
-yourself: agents must not install them on your behalf.
+Without an integration Herdr infers agent state from screen output — a
+heuristic. With one, lifecycle state comes from an authoritative source, so the
+sidebar and every `agent wait` become reliable. Install these yourself; agents
+must never install them on your behalf.
 
-## 3. Prepare the workspace
+✅ `herdr integration status` shows `claude: current (vX)`.
 
-Use a directory containing the canonical skill checkout and one or more Git
-projects as immediate children:
+Grok Build has no integration: it runs fine as a controller or worker, but its
+state does not appear in the sidebar.
+
+## 5. Install hod
 
 ```bash
-mkdir -p ~/work/agent-workspace
-cd ~/work/agent-workspace
-git clone https://github.com/hapo-nghialuu/hod.git herdr-orchestrator
-PROJECT_REPO_URL='https://github.com/OWNER/REPOSITORY.git'
-git clone "$PROJECT_REPO_URL" project-a
+# Track the latest:
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
+
+# Or pin a release — recommended for teams, reproducible:
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
 ```
 
-Required topology:
+This clones the skill into `~/.hod/skill/`, puts the `hod` executable on
+`~/.local/bin/`, and links global adapters so every agent CLI can find the
+skill. If the installer warns about `PATH`, add the exact line it prints to
+your shell profile and open a new terminal.
+
+```bash
+hod status    # overall health; exit 0 when everything is fine
+hod doctor    # same checks plus the exact command to fix each ✗
+```
+
+✅ `hod status` exits 0 with every line ✓.
+
+Optional, any time after this:
+
+```bash
+hod install --project /path/to/repo   # attach one project (global already covers all)
+hod settings install                  # inside a project: write the three role profiles
+```
+
+## 6. Your first orchestrated session
+
+```bash
+cd /path/to/project
+herdr
+```
+
+In the pane, start your controller:
+
+```bash
+claude          # or codex / grok
+```
+
+Then paste a request that **names Herdr and the skill** — without those words
+the skill stays dormant:
 
 ```text
-agent-workspace/
-├── herdr-orchestrator/
-└── project-a/
-    └── .git
+Use Herdr and the herdr-orchestrator skill to <a small, verifiable task>.
+One writer, one read-only reviewer. Do not commit or push.
+Return changed files, real test results, and unresolved questions.
 ```
 
-The project may be a main checkout or Git worktree. Its `.git` marker must be a
-real file or directory, not a symlink, and the supplied path must be the Git
-worktree root.
+The controller runs its preflight, splits panes, starts workers, verifies their
+output, and reports back.
 
-## 4. Install and verify adapters
+✅ **New panes appear in the Herdr sidebar** when it hires workers. If you only
+see "background agents" messages while the sidebar stays still, the CLI is
+using its own internal sub-agents rather than Herdr orchestration — restate the
+request with both names.
 
-Easier path with `hod` (no sibling workspace required — installs global adapters
-and can target one project):
+## While a session runs
+
+| Sidebar | Meaning | What you do |
+| --- | --- | --- |
+| 🟡 working | The agent is busy | Nothing |
+| 🔴 blocked | It needs you | Open that pane to **read** the question, then answer **in the controller pane** |
+| 🔵 done / 🟢 idle | Finished or free | Nothing — the controller harvests it |
+
+Detach any time with `ctrl+b` then `q`; everything keeps running. Reattach with
+`herdr`.
+
+## Three rules worth memorising
+
+1. Answer blocked workers **through the controller**, never by typing into the
+   worker's pane — one chain of command.
+2. Never combine `--dangerously-skip-permissions` with a `--settings` role
+   profile: that flag disables every deny rule and the profile stops enforcing
+   anything.
+3. When something breaks, run `hod doctor` first and read
+   [Troubleshooting](troubleshooting.md) — do not restart the Herdr server.
+
+## The manual alternative
+
+`hod` exists so you do not have to arrange directories. If you prefer to manage
+the checkout yourself, the original sibling-workspace linker still works: the
+canonical checkout and every linked project must be immediate children of one
+parent, and the checkout directory must be named `herdr-orchestrator` (the
+repository is named `hod`, so clone with an explicit destination).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
-hod status
-hod install --project ~/work/agent-workspace/project-a   # optional project link
-```
+mkdir -p ~/work/agent-workspace && cd ~/work/agent-workspace
+git clone https://github.com/hapo-nghialuu/hod.git herdr-orchestrator
+git clone <your-project-url> project-a
 
-Manual sibling-layout alternative:
-
-```bash
-cd ~/work/agent-workspace
 ./herdr-orchestrator/scripts/link-project.sh install ./project-a
 ./herdr-orchestrator/scripts/link-project.sh check ./project-a
 ```
 
-Expected check output names both adapters and their local Git excludes:
+Expected check output — two adapters plus their local Git excludes:
 
 ```text
 ok: .../project-a/.agents/skills/herdr-orchestrator -> ../../../herdr-orchestrator
@@ -117,101 +180,49 @@ ok: excluded from git: .agents/skills/herdr-orchestrator
 ok: excluded from git: .claude/skills/herdr-orchestrator
 ```
 
-The installer also records both adapter paths in the project's local
-`.git/info/exclude` so the machine-specific symlinks are not committed by
-accident. That file is local-only and never committed.
+The linker is idempotent and refuses to replace an existing non-symlink skill
+or follow an unsafe parent symlink. `./scripts/link-all-projects.sh install`
+does the same for every sibling project at once. See
+[Project layouts](project-layouts.md) for team-sharing variants.
 
-The script is safe to run again when both adapters are already correct. It
-stops instead of replacing an existing non-symlink skill or following an unsafe
-parent symlink.
+## Verifying the environment by hand
 
-## 5. Start Herdr from the project
-
-```bash
-cd ~/work/agent-workspace/project-a
-herdr
-```
-
-Herdr launches or attaches to its persistent session. Start your chosen
-controller in a shell pane at the project root:
+The controller does this automatically; run it yourself when diagnosing.
+Inside a Herdr-managed pane:
 
 ```bash
-codex
-```
+test "${HERDR_ENV:-}" = 1 && test -n "${HERDR_PANE_ID:-}"
 
-Use `claude` or `grok` instead when that CLI should control the workflow.
-
-Inside a correctly managed pane, these variables are available:
-
-```bash
-test "${HERDR_ENV:-}" = 1
-test -n "${HERDR_PANE_ID:-}"
-```
-
-Do not export fake values outside Herdr. They are environment evidence, not a
-feature toggle.
-
-## 6. Confirm server compatibility
-
-The controller performs this preflight automatically. To inspect it manually:
-
-```bash
 status_json=$(herdr status --json)
 printf '%s\n' "$status_json" | jq -e \
   '.server.running == true and .server.compatible == true'
 ```
 
-Also confirm the relevant command family:
+Never export those variables outside Herdr — they are environment evidence, not
+a feature toggle. Installed leaf help (`herdr agent start --help`,
+`herdr agent prompt --help`, …) is the authority on command syntax; never mix
+forms from different Herdr versions.
+
+## Choosing models and roles
+
+Model selection is a native CLI argument passed after Herdr's `--` separator,
+and it is separate from role enforcement:
 
 ```bash
-herdr agent --help
-herdr pane --help
-herdr agent start --help
-herdr agent prompt --help
-herdr agent wait --help
+herdr agent start impl --kind claude --pane "$p" \
+  -- --settings .claude/settings.impl.json --model <model-id>
 ```
 
-Do not mix syntax from different Herdr versions. The installed leaf command
-help is authoritative.
+Project defaults live in each CLI's own configuration — for Claude Code, a
+`model` field in `.claude/settings.json`. Exact model IDs and effort controls
+are provider-specific; resolve them from the installed CLI's help rather than
+guessing. See [Usage guide](usage-guide.md) for full recipes.
 
-## 7. Submit the first task
+## Next steps
 
-Invoke the skill explicitly and describe an observable outcome:
-
-```text
-Use Herdr and herdr-orchestrator to add GET /health.
-
-Read the repository instructions first. Keep one implementation writer, run the
-relevant tests, request an independent read-only review, and do not commit or
-push. Return the changed files, command results, and unresolved questions.
-```
-
-The controller will choose the smallest useful workflow. It may keep the task
-single-agent when additional workers would add coordination cost without a real
-quality or speed benefit.
-
-## 8. Configure project-specific models
-
-Use each CLI's native project configuration for defaults. For Claude Code, a
-project can set a default in `.claude/settings.json`:
-
-```json
-{
-  "model": "sonnet"
-}
-```
-
-When the file already contains hooks or permissions, add the `model` field to
-the existing JSON object rather than replacing it.
-
-A task-specific native `--model` argument passed when the worker starts should
-override the project default for that session. Model names, availability, and
-effort controls remain provider-specific and may change over time.
-
-## Next Steps
-
-- Follow [Usage guide](usage-guide.md) for team patterns and prompt recipes.
-- Read [Project layouts](project-layouts.md) before publishing an umbrella
-  workspace or embedding the skill in another repository.
-- Use [Troubleshooting](troubleshooting.md) when adapters or preflight checks
-  fail.
+- [Quickstart](quickstart.md) — the same journey in four escalating levels
+- [Usage guide](usage-guide.md) — prompt recipes, parallel teams, steering
+- [Portfolio orchestration](portfolio-orchestration.md) — one orchestrator,
+  many projects
+- [Troubleshooting](troubleshooting.md) — adapters, preflight, capability
+  mismatches
