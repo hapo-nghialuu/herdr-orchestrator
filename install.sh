@@ -5,7 +5,7 @@
 
 set -eu
 
-HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/herdr-orchestrator.git}"
+HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 HOD_HOME="${HOD_HOME:-${HOME}/.hod}"
 HOD_BIN_DIR="${HOD_BIN_DIR:-${HOME}/.local/bin}"
 # Optional version pin, e.g. HOD_REF=v0.1.0. Default: latest main.

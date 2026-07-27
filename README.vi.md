@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hapo-nghialuu/herdr-orchestrator/actions/workflows/validate.yml"><img src="https://github.com/hapo-nghialuu/herdr-orchestrator/actions/workflows/validate.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/hapo-nghialuu/herdr-orchestrator/releases"><img src="https://img.shields.io/github/v/release/hapo-nghialuu/herdr-orchestrator" alt="release"></a>
+  <a href="https://github.com/hapo-nghialuu/hod/actions/workflows/validate.yml"><img src="https://github.com/hapo-nghialuu/hod/actions/workflows/validate.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/hapo-nghialuu/hod/releases"><img src="https://img.shields.io/github/v/release/hapo-nghialuu/hod" alt="release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue" alt="platform">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
 </p>
@@ -41,14 +41,14 @@ không bên nào giả vờ làm việc của bên kia.
 ## Cài đặt
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/herdr-orchestrator/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
 hod status
 ```
 
 Ghim một phiên bản thay vì bám theo `main`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/herdr-orchestrator/main/install.sh | HOD_REF=v0.1.0 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.0 sh
 ```
 
 Chỉ vậy là xong: không phải sắp xếp lại thư mục, không thủ tục theo từng dự

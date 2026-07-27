@@ -71,7 +71,7 @@ projects as immediate children:
 ```bash
 mkdir -p ~/work/agent-workspace
 cd ~/work/agent-workspace
-git clone https://github.com/hapo-nghialuu/herdr-orchestrator.git
+git clone https://github.com/hapo-nghialuu/hod.git herdr-orchestrator
 PROJECT_REPO_URL='https://github.com/OWNER/REPOSITORY.git'
 git clone "$PROJECT_REPO_URL" project-a
 ```
@@ -95,7 +95,7 @@ Easier path with `hod` (no sibling workspace required — installs global adapte
 and can target one project):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/herdr-orchestrator/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
 hod status
 hod install --project ~/work/agent-workspace/project-a   # optional project link
 ```

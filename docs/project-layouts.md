@@ -18,6 +18,17 @@ engineering-workspace/
 The parent directory name is arbitrary. Each linked project and the canonical
 checkout must be immediate children of that parent.
 
+The GitHub repository is named `hod`, but the canonical checkout directory
+must be named `herdr-orchestrator` — the manual linker resolves that exact
+relative target. Clone with an explicit destination:
+
+```bash
+git clone https://github.com/hapo-nghialuu/hod.git herdr-orchestrator
+```
+
+`hod install` has no such constraint; it keeps its own checkout under
+`~/.hod/skill` and links with absolute paths.
+
 Install adapters:
 
 ```bash
