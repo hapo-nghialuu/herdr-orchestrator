@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 640" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/>
+    </marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f0b429"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9aa7c7"/>
+    </marker>
+  </defs>
+
+  <rect width="1440" height="640" fill="#0d1220"/>
+
+  <!-- You -->
+  <rect x="50" y="270" width="170" height="84" rx="14" fill="#131c31" stroke="#58a6ff" stroke-width="2"/>
+  <text x="135" y="320" text-anchor="middle" fill="#e6edf3" font-size="24" font-weight="bold">Bạn</text>
+
+  <!-- Controller -->
+  <rect x="520" y="248" width="300" height="128" rx="16" fill="#131c31" stroke="#f0b429" stroke-width="2.5"/>
+  <text x="670" y="300" text-anchor="middle" fill="#f0b429" font-size="24" font-weight="bold">Controller</text>
+  <text x="670" y="334" text-anchor="middle" fill="#9aa7c7" font-size="15">chỉ phân tích &amp; giao việc</text>
+
+  <!-- Worker impl -->
+  <rect x="1150" y="84" width="240" height="76" rx="12" fill="#131c31" stroke="#8b98b8" stroke-width="1.8"/>
+  <circle cx="1176" cy="122" r="6" fill="#e3b341"/>
+  <text x="1282" y="129" text-anchor="middle" fill="#e6edf3" font-size="19">Worker · code</text>
+
+  <!-- Worker test -->
+  <rect x="1150" y="272" width="240" height="76" rx="12" fill="#131c31" stroke="#8b98b8" stroke-width="1.8"/>
+  <circle cx="1176" cy="310" r="6" fill="#e3b341"/>
+  <text x="1282" y="317" text-anchor="middle" fill="#e6edf3" font-size="19">Worker · test</text>
+
+  <!-- Reviewer -->
+  <rect x="1150" y="452" width="240" height="92" rx="12" fill="#131c31" stroke="#b48cff" stroke-width="1.8"/>
+  <circle cx="1176" cy="490" r="6" fill="#b48cff"/>
+  <text x="1282" y="492" text-anchor="middle" fill="#e6edf3" font-size="19">Reviewer</text>
+  <text x="1270" y="520" text-anchor="middle" fill="#9aa7c7" font-size="13">read-only · session mới</text>
+
+  <!-- You -> Controller -->
+  <line x1="220" y1="298" x2="516" y2="298" stroke="#58a6ff" stroke-width="2" marker-end="url(#ab)"/>
+  <text x="368" y="284" text-anchor="middle" fill="#8fbfff" font-size="15">một yêu cầu</text>
+
+  <!-- Controller -> You (dashed) -->
+  <line x1="520" y1="346" x2="224" y2="346" stroke="#58a6ff" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#ab)"/>
+  <text x="368" y="380" text-anchor="middle" fill="#8fbfff" font-size="14">báo cáo đã kiểm chứng</text>
+  <text x="368" y="400" text-anchor="middle" fill="#8fbfff" font-size="14">+ câu hỏi tồn đọng</text>
+
+  <!-- Controller -> impl -->
+  <path d="M 820 278 C 960 268, 1000 132 1146 122" fill="none" stroke="#f0b429" stroke-width="2" marker-end="url(#aa)"/>
+  <text paint-order="stroke" stroke="#0d1220" stroke-width="10" x="962" y="176" text-anchor="middle" fill="#f0b429" font-size="14">task tự chứa</text>
+
+  <!-- impl -> Controller (dashed) -->
+  <path d="M 1150 146 C 1010 162, 970 288 824 295" fill="none" stroke="#9aa7c7" stroke-width="1.8" stroke-dasharray="6 6" marker-end="url(#ag)"/>
+  <text paint-order="stroke" stroke="#0d1220" stroke-width="10" x="1012" y="236" text-anchor="middle" fill="#9aa7c7" font-size="14">diff + output thật</text>
+
+  <!-- Controller -> test -->
+  <line x1="820" y1="300" x2="1146" y2="300" stroke="#f0b429" stroke-width="2" marker-end="url(#aa)"/>
+  <text paint-order="stroke" stroke="#0d1220" stroke-width="10" x="983" y="288" text-anchor="middle" fill="#f0b429" font-size="14">task tự chứa</text>
+
+  <!-- test -> Controller (dashed) -->
+  <line x1="1150" y1="330" x2="824" y2="330" stroke="#9aa7c7" stroke-width="1.8" stroke-dasharray="6 6" marker-end="url(#ag)"/>
+  <text paint-order="stroke" stroke="#0d1220" stroke-width="10" x="983" y="356" text-anchor="middle" fill="#9aa7c7" font-size="14">kết quả + exit code</text>
+
+  <!-- Controller -> reviewer -->
+  <path d="M 820 356 C 960 366, 1000 480 1146 490 " fill="none" stroke="#f0b429" stroke-width="2" marker-end="url(#aa)"/>
+  <text paint-order="stroke" stroke="#0d1220" stroke-width="10" x="960" y="408" text-anchor="middle" fill="#f0b429" font-size="14">giao việc read-only</text>
+
+  <!-- reviewer -> Controller (dashed) -->
+  <path d="M 1150 514 C 1000 530, 950 378 824 370" fill="none" stroke="#9aa7c7" stroke-width="1.8" stroke-dasharray="6 6" marker-end="url(#ag)"/>
+  <text paint-order="stroke" stroke="#0d1220" stroke-width="10" x="1006" y="474" text-anchor="middle" fill="#9aa7c7" font-size="14">finding kèm file:dòng</text>
+</svg>

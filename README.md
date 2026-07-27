@@ -65,20 +65,8 @@ sidebar shows authoritative agent states.
 ## How it works
 
 <p align="center">
-  <img src="assets/hod-flow.png" alt="You → controller → workers → evidence back" width="820">
+  <img src="assets/hod-flow-en.svg" alt="You → controller → workers → evidence back" width="900">
 </p>
-
-```mermaid
-flowchart LR
-    U([You]) -- "one request" --> C[Controller<br/>plans & delegates only]
-    C -- "self-contained task" --> W1[Worker · impl]
-    C -- "self-contained task" --> W2[Worker · test]
-    C -- "read-only, fresh session" --> R[Reviewer]
-    W1 -- "diff + real output" --> C
-    W2 -- "results + exit codes" --> C
-    R -- "file:line findings" --> C
-    C -- "verified report + open questions" --> U
-```
 
 1. **You speak to one agent.** Inside a Herdr pane, name the skill explicitly:
 

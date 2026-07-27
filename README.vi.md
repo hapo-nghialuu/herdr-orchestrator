@@ -64,20 +64,8 @@ thị trạng thái agent chính xác.
 ## Cách hoạt động
 
 <p align="center">
-  <img src="assets/hod-flow.png" alt="Bạn → controller → workers → bằng chứng quay về" width="820">
+  <img src="assets/hod-flow-vi.svg" alt="Bạn → controller → workers → bằng chứng quay về" width="900">
 </p>
-
-```mermaid
-flowchart LR
-    U([Bạn]) -- "một yêu cầu" --> C[Controller<br/>chỉ phân tích & giao việc]
-    C -- "task tự chứa" --> W1[Worker · code]
-    C -- "task tự chứa" --> W2[Worker · test]
-    C -- "read-only, session mới" --> R[Reviewer]
-    W1 -- "diff + output thật" --> C
-    W2 -- "kết quả + exit code" --> C
-    R -- "finding kèm file:dòng" --> C
-    C -- "báo cáo đã kiểm chứng + câu hỏi tồn đọng" --> U
-```
 
 1. **Bạn chỉ nói chuyện với một agent.** Trong pane Herdr, gọi tên skill một
    cách tường minh:
