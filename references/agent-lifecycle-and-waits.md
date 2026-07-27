@@ -70,6 +70,11 @@ herdr agent start api_impl --kind "$worker_kind" --pane "$worker_pane"
 `agent start` requires an existing available shell pane; it does not create
 topology. Put native agent arguments only after `--`.
 
+Starting a worker bare when the project ships a role profile discards the
+user's configuration without any error. Check for one first and pass it in the
+same command; see
+[Model routing and context](model-routing-and-context.md).
+
 Submit one complete direct-user prompt atomically:
 
 ```bash
