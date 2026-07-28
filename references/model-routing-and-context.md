@@ -97,6 +97,20 @@ grok --help     # --allow/--deny <rule>, --disallowed-tools <tools>
   policy rather than per-tool rules.
 - **Grok** takes allow/deny rules and can drop built-in tools outright.
 
+Keep these profiles small. A deny rule on a whole tool (`Edit`, `Write`,
+`Agent`) is airtight — the harness removes the tool from the model's context.
+A deny rule on a shell command prefix is not: it matches the first token only,
+so blocking `pytest` leaves `python -m pytest` open and blocking `npm` leaves
+`./node_modules/.bin/jest` open. Long lists of command prefixes create the
+appearance of a boundary while obstructing legitimate work; state such
+restrictions in the task prompt and verify them from evidence instead.
+
+For a coordinator-only controller the load-bearing rules are the tool denies:
+`Edit`, `Write`, `NotebookEdit` stop it from doing the work, and `Agent` stops
+it from spawning in-process sub-agents that would bypass Herdr and flood its
+context. See [Delegation and direct-user
+contract](delegation-and-direct-user-contract.md).
+
 An enforced boundary is the same contract as the written one, not a lighter
 version: never route around a denied tool by shelling out or handing the action
 to another agent. Boundaries are fixed when the agent starts and cannot be

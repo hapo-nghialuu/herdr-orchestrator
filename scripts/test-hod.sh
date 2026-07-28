@@ -345,6 +345,20 @@ done
 expect_rejection 'settings profiles carry no credential keys' \
   grep -rqE 'ANTHROPIC_(API_KEY|AUTH_TOKEN)|apiKeyHelper' "$sproj/.claude/"
 
+# A bare "Agent" deny removes the sub-agent tool from the model's context, which
+# is what forces delegation through Herdr panes instead of in-process children.
+for role in controller reviewer; do
+  expect_success "profile denies the sub-agent tool: $role" \
+    python3 -c 'import json,sys; sys.exit(0 if "Agent" in json.load(open(sys.argv[1]))["permissions"]["deny"] else 1)' \
+      "$sproj/.claude/settings.$role.json"
+done
+
+# Shell-prefix denies match the first token only, so they promise more than they
+# deliver. Keep the controller profile built on tool denies.
+expect_rejection 'controller profile has no build-tool prefix denies' \
+  grep -qE '"Bash\((npm|pnpm|yarn|npx|cargo|make|go |pytest|xcodebuild|swift)' \
+    "$sproj/.claude/settings.controller.json"
+
 # Existing user edits are preserved unless --force.
 printf '{ "permissions": { "deny": ["Mine"] } }\n' >"$sproj/.claude/settings.impl.json"
 expect_success 'settings install keeps an existing profile' \

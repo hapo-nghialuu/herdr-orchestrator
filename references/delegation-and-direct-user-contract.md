@@ -102,6 +102,35 @@ Always done by the controller — these are accountability, not work:
 A controller that delegates work but accepts claims without reading evidence
 has not delegated — it has abdicated. Both halves are required.
 
+### Delegate through Herdr, never through in-process sub-agents
+
+Most agent CLIs can spawn sub-agents inside their own session. Under this skill
+that path is closed: every unit of delegated work goes to a Herdr pane.
+
+The reason is context, not ceremony. A Herdr worker's transcript lives in its
+own pane; the controller reads a bounded summary and the evidence it asks for.
+An in-process sub-agent returns its entire exploration into the controller's
+context. A few of those exhaust the context window mid-task, and the run dies
+with no worker to resume — the exact failure Herdr exists to prevent. The
+sidebar also goes blind: internal sub-agents have no pane, no lifecycle state,
+and nothing the user can open, read, or answer.
+
+So when the controller needs code explored, a plan drafted, a file surveyed, or
+anything else it would hand to a sub-agent, start a Herdr worker instead:
+
+```bash
+herdr agent start explore --kind claude --pane "$pane" --no-focus
+```
+
+New panes appearing in the sidebar are the user-visible proof that delegation
+went through Herdr. If a task genuinely does not deserve a pane, it is small
+enough for the controller's own read-only inspection — see the accountability
+list above. There is no third option.
+
+Where the harness supports it, this is enforced rather than trusted: a
+controller profile that denies the sub-agent tool removes it from the model's
+context entirely. See [Model routing and context](model-routing-and-context.md).
+
 ### Delegate execution, keep verification
 
 Coordinator-only restricts *where commands run*, not *who is accountable for

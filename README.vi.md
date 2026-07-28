@@ -236,9 +236,20 @@ hod settings install     # ghi .claude/settings.<vai>.json + tự thêm git excl
 
 | Vai | Bị chặn | Ý nghĩa |
 | --- | --- | --- |
-| `controller` | `Edit`/`Write` + `npm` `cargo` `make` `go` `pytest` `xcodebuild` `swift`… + `git push/merge` | Lập kế hoạch, giao việc, đọc bằng chứng. Không tự code, build, hay test |
+| `controller` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Lập kế hoạch và giao việc. Không sửa file, và không spawn sub-agent nội bộ để đi đường tắt qua Herdr |
 | `impl` | `git push` `merge` `reset --hard` `tag` | Code thoải mái; không phát tán ra ngoài |
-| `reviewer` | tool sửa file + lệnh git ghi + `rm` | Read-only thật sự |
+| `reviewer` | tool sửa file + `Agent` + lệnh git ghi + `rm` | Read-only thật sự, và tự mắt mình đọc diff |
+
+Chặn cả một tool là kín tuyệt đối — harness gỡ tool khỏi context của model.
+Chặn theo tiền tố shell thì không: nó chỉ khớp token đầu tiên, nên
+`Bash(pytest:*)` vẫn để hở `python -m pytest`. Vì vậy các profile này dựa vào
+việc chặn tool, còn kỷ luật dòng lệnh thì để cho prompt và bằng chứng mà
+controller đọc lại.
+
+`Agent` là luật giữ cho việc điều phối trung thực. Không có nó, controller âm
+thầm quay về dùng sub-agent của chính CLI: sidebar không hiện pane nào, bạn
+không mở hay trả lời được, và toàn bộ transcript của chúng đổ vào context
+controller cho tới khi phiên chết vì hết context.
 
 ```bash
 herdr agent start impl --kind claude --pane "$p" \

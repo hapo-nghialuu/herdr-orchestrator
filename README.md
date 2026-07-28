@@ -238,9 +238,20 @@ hod settings install          # writes .claude/settings.<role>.json + git-exclud
 
 | Role | Denied | Meaning |
 | --- | --- | --- |
-| `controller` | `Edit`/`Write` + `npm` `cargo` `make` `go` `pytest` `xcodebuild` `swift` … + `git push/merge` | Plans, delegates, reads evidence. Cannot code, build, or test by hand |
+| `controller` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Plans and delegates. Cannot edit files, and cannot spawn in-process sub-agents that would bypass Herdr |
 | `impl` | `git push` `merge` `reset --hard` `tag` | Writes code freely; cannot publish |
-| `reviewer` | edit tools + writing git commands + `rm` | Genuinely read-only |
+| `reviewer` | edit tools + `Agent` + writing git commands + `rm` | Genuinely read-only, and reviews with its own eyes |
+
+Denying a whole tool is airtight — the harness removes it from the model's
+context. Denying a shell prefix is not: it matches the first token only, so
+`Bash(pytest:*)` leaves `python -m pytest` open. These profiles therefore rely
+on tool denies and leave command discipline to the task prompt and the evidence
+the controller reads back.
+
+`Agent` is the rule that keeps orchestration honest. Without it a controller
+quietly falls back to its CLI's own sub-agents: no pane appears in the sidebar,
+you cannot open or answer them, and their full transcripts land in the
+controller's context until the run dies of context exhaustion.
 
 ```bash
 herdr agent start impl --kind claude --pane "$p" \
