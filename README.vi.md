@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.2 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.4 sh
 ```
 
 </details>
@@ -188,18 +188,42 @@ không phải điều phối qua Herdr; hãy nhắc lại yêu cầu kèm tên H
 | Lệnh | Tác dụng |
 | --- | --- |
 | `hod install` | Clone/cập nhật skill và tạo adapter global (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Gắn một dự án Git — vị trí bất kỳ, không cần layout sibling |
+| `hod install --project <path>` | Gắn một dự án Git — vị trí bất kỳ, không cần layout sibling. Đồng thời ghi khối nhắc (`--no-memo` để bỏ qua) |
 | `hod install --ref <tag>` | Ghim skill vào một tag phát hành |
 | `hod status` | Một dòng ✓/✗ cho từng mục: công cụ, agent CLI, checkout, adapter, PATH. Exit 0 khi khỏe |
 | `hod doctor` | Như `status` cộng thêm lệnh khắc phục, kiểm tra adapter, chế độ checkout (branch/pinned), trạng thái integration |
 | `hod update` | Fast-forward skill; checkout đang pin sẽ nhảy tới tag mới nhất. Từ chối khi cây có sửa đổi |
 | `hod settings list` | Liệt kê profile quyền theo vai + lệnh khởi động dán được ngay |
 | `hod settings install [--role <r>] [--force]` | Ghi profile theo vai vào `.claude/` của dự án |
-| `hod uninstall [--purge]` | Chỉ xóa adapter trỏ về `~/.hod/skill`; không bao giờ đụng file lạ |
+| `hod uninstall [--purge]` | Chỉ xóa adapter trỏ về `~/.hod/skill` và cắt khối nhắc; không bao giờ đụng file lạ |
 
 Mọi lệnh `hod` gọi tới Herdr đều **chỉ đọc** (`herdr status`,
 `herdr integration status`). Nó không bao giờ khởi động agent, không cài
 integration, không thay đổi phiên — quyền đó thuộc về bạn và controller.
+
+## Khối nhắc
+
+Model hay quên giữa chừng rằng có Herdr để chia việc. Khi cài vào dự án, hod
+ghi vài dòng vào `CLAUDE.md` và `AGENTS.md` — file mà agent CLI đọc mỗi lượt —
+để nhắc controller giao việc thay vì tự làm:
+
+```markdown
+<!-- hod:begin — managed by hod; edits inside this block are overwritten -->
+## Herdr orchestration
+...
+<!-- hod:end -->
+```
+
+Cặp mốc khiến việc chạy lại an toàn: chỉ phần giữa 2 mốc bị thay, mọi thứ bạn
+viết bên ngoài giữ nguyên từng byte, và `hod uninstall --project` cắt khối đó
+đi. hod từ chối động vào file có mốc lệch hoặc file là symlink.
+
+Hai file này thường thuộc về repo nên khối nhắc sẽ hiện trong `git status` —
+**xem diff rồi tự quyết có commit hay không**; hod không bao giờ commit. Muốn
+bỏ hẳn thì dùng `hod install --project <path> --no-memo`.
+
+Khối nhắc **không** ép skill chạy: muốn kích hoạt vẫn phải gọi tên Herdr hoặc
+tên skill trong lời nhờ. Nó nhắc, không ghi đè.
 
 ## Profile theo vai: luật do harness cưỡng chế
 
@@ -210,11 +234,29 @@ ranh giới agent **không thể** vượt qua, kể cả khi bị yêu cầu:
 hod settings install     # ghi .claude/settings.<vai>.json + tự thêm git exclude
 ```
 
-| Vai | Bị chặn | Ý nghĩa |
-| --- | --- | --- |
-| `controller` | `Edit`/`Write` + `npm` `cargo` `make` `go` `pytest` `xcodebuild` `swift`… + `git push/merge` | Lập kế hoạch, giao việc, đọc bằng chứng. Không tự code, build, hay test |
-| `impl` | `git push` `merge` `reset --hard` `tag` | Code thoải mái; không phát tán ra ngoài |
-| `reviewer` | tool sửa file + lệnh git ghi + `rm` | Read-only thật sự |
+| Vai | Chế độ | Bị chặn | Ý nghĩa |
+| --- | --- | --- | --- |
+| `controller` | `default` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Lập kế hoạch và giao việc. Không sửa file, và không spawn sub-agent nội bộ để đi đường tắt qua Herdr |
+| `impl` | `acceptEdits` | `git push` `merge` `reset --hard` `tag` | Code thoải mái, không bị hỏi từng file; không phát tán ra ngoài |
+| `reviewer` | `default` | tool sửa file + `Agent` + lệnh git ghi + `rm` | Read-only thật sự, và tự mắt mình đọc diff |
+
+Chặn cả một tool là kín tuyệt đối — harness gỡ tool khỏi context của model.
+Chặn theo tiền tố shell thì không: nó chỉ khớp token đầu tiên, nên
+`Bash(pytest:*)` vẫn để hở `python -m pytest`. Vì vậy các profile này dựa vào
+việc chặn tool, còn kỷ luật dòng lệnh thì để cho prompt và bằng chứng mà
+controller đọc lại.
+
+`Agent` là luật giữ cho việc điều phối trung thực. Không có nó, controller âm
+thầm quay về dùng sub-agent của chính CLI: sidebar không hiện pane nào, bạn
+không mở hay trả lời được, và toàn bộ transcript của chúng đổ vào context
+controller cho tới khi phiên chết vì hết context.
+
+Mỗi profile cũng tự khai `defaultMode`, vì file `--settings` **thắng**
+`~/.claude/settings.json` của bạn. Điều này quan trọng nếu máy bạn đang dùng
+`dontAsk`: chế độ đó tự động từ chối mọi tool không có trong
+`permissions.allow`, **và** chặn `AskUserQuestion` kể cả khi đã allow — nên
+worker mất `Bash` và không còn báo được là mình đang kẹt. Pane im lặng, còn
+controller thì chờ mãi. Đừng bao giờ để `dontAsk` trong profile theo vai.
 
 ```bash
 herdr agent start impl --kind claude --pane "$p" \
@@ -361,7 +403,8 @@ herdr-orchestrator/
 hod status                         # mọi thứ đã nối đúng chưa?
 hod doctor                         # như trên, kèm cách sửa từng lỗi
 hod update                         # kéo skill mới nhất (hoặc tag mới nhất nếu đang pin)
-hod install --project <path>       # gắn một dự án
+hod install --project <path>       # gắn một dự án (+ khối nhắc)
+hod install --project <path> --no-memo   # gắn mà không đụng CLAUDE.md
 hod settings install               # ghi profile theo vai vào dự án
 hod uninstall [--purge]            # chỉ gỡ link do hod quản lý
 ```

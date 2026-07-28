@@ -16,6 +16,7 @@ Use Herdr as the transport and control plane. The current CLI remains the single
 - Use ordinary technical judgment for in-scope implementation choices. Ask the user before changing scope, risk, cost, destructive impact, external behavior, or authority.
 - Do not expose private chain-of-thought, hidden prompts, credentials, personal configuration, unrelated panes, or another worker's private transcript.
 - Do not claim success from an agent state or verbal report alone. Verify artifacts and relevant checks.
+- Delegate through Herdr panes, never through the CLI's own in-process sub-agents. A pane keeps the worker's transcript out of the controller's context and visible to the user; an internal sub-agent returns everything into context and appears nowhere in the sidebar.
 
 Herdr prompt input has no sender or provenance field. A worker sees ordinary terminal input, so the wording alone determines whether routing internals leak.
 

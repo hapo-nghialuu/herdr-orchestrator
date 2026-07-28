@@ -2,17 +2,17 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.2
-HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/herdr-orchestrator.git}"
+HOD_VERSION=0.1.4
+HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 
 usage() {
   cat <<'EOF'
 Usage:
-  hod install [--project <path>] [--ref <git-ref>]
+  hod install [--project <path>] [--ref <git-ref>] [--no-memo]
   hod status
   hod doctor
   hod update
-  hod uninstall [--project <path>] [--purge]
+  hod uninstall [--project <path>] [--purge] [--no-memo]
   hod settings list
   hod settings install [--project <path>] [--role <name>] [--force]
   hod version
@@ -31,6 +31,12 @@ Subcommands:
               (list shows the roles; install writes .claude/settings.<role>.json)
   version     Print the hod version
   help        Show this help
+
+A project install also writes a short reminder block into CLAUDE.md and
+AGENTS.md, delimited by <!-- hod:begin --> / <!-- hod:end -->. Anything you
+wrote outside those markers is preserved, re-running only replaces the block,
+and uninstall removes it. Those files usually belong to the repository, so
+review the diff — hod never commits. Skip it with --no-memo.
 
 Settings profiles carry permission boundaries only — never credentials.
 Claude Code merges them over the project's own settings, so tokens, endpoints
@@ -80,6 +86,10 @@ resolve_paths() {
   PROJECT_ADAPTER_REL_AGENTS=.agents/skills/$SKILL_ADAPTER_NAME
   PROJECT_ADAPTER_REL_CLAUDE=.claude/skills/$SKILL_ADAPTER_NAME
 }
+
+MEMO_BEGIN='<!-- hod:begin — managed by hod; edits inside this block are overwritten -->'
+MEMO_END='<!-- hod:end -->'
+MEMO_FILES="CLAUDE.md AGENTS.md"
 
 abs_path() {
   local target=$1
@@ -355,8 +365,143 @@ install_project_adapters_absolute() {
   trap - EXIT
 }
 
+# Replace a file through a temporary sibling, keeping the original mode. mktemp
+# creates 0600, which would silently tighten a repository file's permissions.
+# GNU chmod has --reference; BSD does not, and its stat spells the mode
+# differently, so validate whatever the fallback produces before trusting it.
+# BSD chmod also rejects `--`, so no end-of-options marker here.
+replace_preserving_mode() {
+  local tmp=$1 file=$2
+  local mode
+
+  if [[ -f "$file" ]] && ! chmod "--reference=$file" "$tmp" 2>/dev/null; then
+    mode=$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file" 2>/dev/null || true)
+    if [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then
+      chmod "$mode" "$tmp"
+    fi
+  fi
+  mv -- "$tmp" "$file"
+}
+
+memo_body() {
+  local template=$SKILL_DIR/templates/memo.md
+
+  [[ -f "$template" ]] || fail "memo template missing: $template"
+  printf '%s\n' "$MEMO_BEGIN"
+  cat -- "$template"
+  printf '%s\n' "$MEMO_END"
+}
+
+# Rewrite one memo file so exactly one hod-managed block is present. Content the
+# user wrote outside the markers is preserved byte-for-byte.
+write_memo_file() {
+  local file=$1
+  local tmp
+  local begin_seen=false end_seen=false
+
+  if [[ -e "$file" && ! -f "$file" ]]; then
+    fail "memo path exists but is not a regular file: $file"
+  fi
+  if [[ -L "$file" ]]; then
+    fail "memo path is a symlink; refusing to write through it: $file"
+  fi
+
+  if [[ ! -f "$file" ]]; then
+    memo_body >"$file"
+    printf 'memo created: %s\n' "$file"
+    return 0
+  fi
+
+  grep -qxF -- "$MEMO_BEGIN" "$file" && begin_seen=true
+  grep -qxF -- "$MEMO_END" "$file" && end_seen=true
+  if [[ "$begin_seen" != "$end_seen" ]]; then
+    fail "memo markers are unbalanced in $file; fix or remove them by hand"
+  fi
+
+  tmp=$(mktemp "$file.hod.XXXXXX") || fail "cannot create temporary file next to $file"
+
+  if [[ "$begin_seen" == true ]]; then
+    local in_block=false replaced=false line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      if [[ "$line" == "$MEMO_BEGIN" ]]; then
+        in_block=true
+        if [[ "$replaced" == false ]]; then
+          memo_body >>"$tmp"
+          replaced=true
+        fi
+        continue
+      fi
+      if [[ "$in_block" == true ]]; then
+        [[ "$line" == "$MEMO_END" ]] && in_block=false
+        continue
+      fi
+      printf '%s\n' "$line" >>"$tmp"
+    done <"$file"
+    printf 'memo updated: %s\n' "$file"
+  else
+    cat -- "$file" >"$tmp"
+    # Separate from existing prose; harmless if the file already ends blank.
+    printf '\n' >>"$tmp"
+    memo_body >>"$tmp"
+    printf 'memo appended: %s\n' "$file"
+  fi
+
+  replace_preserving_mode "$tmp" "$file"
+}
+
+# Strip the managed block; leave everything else. A file that held nothing but
+# the block was created by hod, so remove it rather than leave an empty stub.
+strip_memo_file() {
+  local file=$1
+  local tmp in_block=false line
+
+  [[ -f "$file" && ! -L "$file" ]] || return 0
+  grep -qxF -- "$MEMO_BEGIN" "$file" || return 0
+
+  tmp=$(mktemp "$file.hod.XXXXXX") || fail "cannot create temporary file next to $file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "$MEMO_BEGIN" ]]; then
+      in_block=true
+      continue
+    fi
+    if [[ "$in_block" == true ]]; then
+      [[ "$line" == "$MEMO_END" ]] && in_block=false
+      continue
+    fi
+    printf '%s\n' "$line" >>"$tmp"
+  done <"$file"
+
+  if [[ ! -s "$tmp" ]] || ! grep -q '[^[:space:]]' "$tmp"; then
+    rm -f -- "$tmp" "$file"
+    printf 'memo removed, file was hod-only: %s\n' "$file"
+    return 0
+  fi
+
+  replace_preserving_mode "$tmp" "$file"
+  printf 'memo removed from: %s\n' "$file"
+}
+
+install_project_memo() {
+  local project_dir=$1
+  local name
+
+  for name in $MEMO_FILES; do
+    write_memo_file "$project_dir/$name"
+  done
+  printf 'memo files are yours to commit or discard; hod never commits\n'
+}
+
+uninstall_project_memo() {
+  local project_dir=$1
+  local name
+
+  for name in $MEMO_FILES; do
+    strip_memo_file "$project_dir/$name"
+  done
+}
+
 cmd_install() {
-  local project_path="" ref=""
+  local project_path="" ref="" memo=true
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -369,6 +514,10 @@ cmd_install() {
         [[ $# -ge 2 ]] || usage_error "--ref requires a git ref"
         ref=$2
         shift 2
+        ;;
+      --no-memo)
+        memo=false
+        shift
         ;;
       -h|--help)
         usage
@@ -397,6 +546,10 @@ cmd_install() {
     else
       printf 'installing absolute adapters into project: %s\n' "$project_dir"
       install_project_adapters_absolute "$project_dir"
+    fi
+
+    if [[ "$memo" == true ]]; then
+      install_project_memo "$project_dir"
     fi
   else
     install_global_adapters
@@ -741,7 +894,7 @@ remove_if_managed_adapter() {
 }
 
 cmd_uninstall() {
-  local project_path="" purge=false
+  local project_path="" purge=false memo=true
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -752,6 +905,10 @@ cmd_uninstall() {
         ;;
       --purge)
         purge=true
+        shift
+        ;;
+      --no-memo)
+        memo=false
         shift
         ;;
       -h|--help)
@@ -770,6 +927,9 @@ cmd_uninstall() {
     project_dir=$(cd -- "$project_path" && pwd -P)
     remove_if_managed_adapter "$project_dir/$PROJECT_ADAPTER_REL_AGENTS"
     remove_if_managed_adapter "$project_dir/$PROJECT_ADAPTER_REL_CLAUDE"
+    if [[ "$memo" == true ]]; then
+      uninstall_project_memo "$project_dir"
+    fi
     printf 'left .git/info/exclude entries alone (harmless)\n'
   else
     remove_if_managed_adapter "$GLOBAL_AGENTS_LINK"

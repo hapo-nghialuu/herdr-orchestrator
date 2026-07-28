@@ -81,7 +81,7 @@ state does not appear in the sidebar.
 curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
 
 # Or pin a release — recommended for teams, reproducible:
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.2 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.4 sh
 ```
 
 This clones the skill into `~/.hod/skill/`, puts the `hod` executable on
@@ -102,6 +102,13 @@ Optional, any time after this:
 hod install --project /path/to/repo   # attach one project (global already covers all)
 hod settings install                  # inside a project: write the three role profiles
 ```
+
+A project install also appends a short reminder block to `CLAUDE.md` and
+`AGENTS.md`, between `<!-- hod:begin -->` and `<!-- hod:end -->` markers, so the
+controller does not forget that Herdr orchestration is available. Re-running
+replaces only that block; `hod uninstall --project` removes it. Those files
+normally belong to the repository, so review the diff before committing — or
+pass `--no-memo` to skip the block entirely.
 
 ## 6. Your first orchestrated session
 

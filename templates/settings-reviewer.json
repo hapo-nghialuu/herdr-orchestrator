@@ -1,9 +1,11 @@
 {
   "permissions": {
+    "defaultMode": "default",
     "deny": [
       "Edit",
       "Write",
       "NotebookEdit",
+      "Agent",
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git merge:*)",

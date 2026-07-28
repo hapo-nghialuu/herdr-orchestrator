@@ -345,6 +345,31 @@ done
 expect_rejection 'settings profiles carry no credential keys' \
   grep -rqE 'ANTHROPIC_(API_KEY|AUTH_TOKEN)|apiKeyHelper' "$sproj/.claude/"
 
+# A bare "Agent" deny removes the sub-agent tool from the model's context, which
+# is what forces delegation through Herdr panes instead of in-process children.
+for role in controller reviewer; do
+  expect_success "profile denies the sub-agent tool: $role" \
+    python3 -c 'import json,sys; sys.exit(0 if "Agent" in json.load(open(sys.argv[1]))["permissions"]["deny"] else 1)' \
+      "$sproj/.claude/settings.$role.json"
+done
+
+# Every profile pins its own defaultMode. A --settings file outranks the user's
+# settings.json, so a machine configured with dontAsk would otherwise auto-deny
+# unlisted tools and block AskUserQuestion, stranding the worker.
+expect_success 'controller profile uses default mode' \
+  bash -c "test \"\$(jq -r '.permissions.defaultMode' '$sproj/.claude/settings.controller.json')\" = default"
+expect_success 'reviewer profile uses default mode' \
+  bash -c "test \"\$(jq -r '.permissions.defaultMode' '$sproj/.claude/settings.reviewer.json')\" = default"
+expect_success 'impl profile uses acceptEdits mode' \
+  bash -c "test \"\$(jq -r '.permissions.defaultMode' '$sproj/.claude/settings.impl.json')\" = acceptEdits"
+expect_rejection 'no profile ships dontAsk mode' \
+  grep -rq 'dontAsk' "$sproj/.claude/"
+
+
+expect_rejection 'controller profile has no build-tool prefix denies' \
+  grep -qE '"Bash\((npm|pnpm|yarn|npx|cargo|make|go |pytest|xcodebuild|swift)' \
+    "$sproj/.claude/settings.controller.json"
+
 # Existing user edits are preserved unless --force.
 printf '{ "permissions": { "deny": ["Mine"] } }\n' >"$sproj/.claude/settings.impl.json"
 expect_success 'settings install keeps an existing profile' \
@@ -364,6 +389,84 @@ expect_rejection 'settings install refuses a symlinked destination' \
   "$hod" settings install --project "$sproj" --role reviewer --force
 expect_success 'symlink target untouched' \
   test -L "$sproj/.claude/settings.reviewer.json"
+
+# ---------------------------------------------------------------------------
+# memo blocks in CLAUDE.md / AGENTS.md
+# ---------------------------------------------------------------------------
+memo_begin='<!-- hod:begin — managed by hod; edits inside this block are overwritten -->'
+
+new_memo_project() {
+  local dir=$1
+  mkdir -p -- "$dir"
+  git -C "$dir" init -q
+  git -C "$dir" config user.email "hod-test@example.com"
+  git -C "$dir" config user.name "hod-test"
+}
+
+mproj=$tmp_root/projects/memo-demo
+new_memo_project "$mproj"
+printf '# CLAUDE.md\n\nuser prose above\n' >"$mproj/CLAUDE.md"
+chmod 644 "$mproj/CLAUDE.md"
+
+expect_success 'project install writes memo blocks' \
+  "$hod" install --project "$mproj"
+
+for name in CLAUDE.md AGENTS.md; do
+  expect_success "memo block present in $name" \
+    grep -qxF -- "$memo_begin" "$mproj/$name"
+done
+
+expect_success 'memo keeps existing prose' \
+  grep -qxF -- 'user prose above' "$mproj/CLAUDE.md"
+
+expect_success 'memo preserves file mode' \
+  python3 -c 'import os,stat,sys; sys.exit(0 if stat.S_IMODE(os.stat(sys.argv[1]).st_mode) == 0o644 else 1)' \
+    "$mproj/CLAUDE.md"
+
+# Content the user adds after the block must survive a re-install.
+printf '\n## added later\n\nkeep me\n' >>"$mproj/CLAUDE.md"
+cp -- "$mproj/CLAUDE.md" "$tmp_root/memo-snapshot.md"
+expect_success 'memo re-install succeeds' \
+  "$hod" install --project "$mproj"
+expect_success 'memo re-install is idempotent' \
+  cmp -s "$tmp_root/memo-snapshot.md" "$mproj/CLAUDE.md"
+expect_success 'memo block is not duplicated' \
+  bash -c "test \"\$(grep -cxF -- '$memo_begin' '$mproj/CLAUDE.md')\" = 1"
+
+expect_success 'uninstall strips memo blocks' \
+  "$hod" uninstall --project "$mproj"
+expect_rejection 'memo block gone after uninstall' \
+  grep -qxF -- "$memo_begin" "$mproj/CLAUDE.md"
+expect_success 'user prose survives uninstall' \
+  grep -qxF -- 'keep me' "$mproj/CLAUDE.md"
+expect_rejection 'hod-only memo file is removed, not left empty' \
+  test -e "$mproj/AGENTS.md"
+
+# --no-memo keeps adapters but never touches the repository's own files.
+mskip=$tmp_root/projects/memo-skip
+new_memo_project "$mskip"
+expect_success 'install --no-memo succeeds' \
+  "$hod" install --project "$mskip" --no-memo
+expect_rejection 'install --no-memo writes no CLAUDE.md' \
+  test -e "$mskip/CLAUDE.md"
+expect_success 'install --no-memo still links adapters' \
+  test -L "$mskip/.claude/skills/herdr-orchestrator"
+
+# Damaged or hostile memo files must stop the install rather than be rewritten.
+mbad=$tmp_root/projects/memo-unbalanced
+new_memo_project "$mbad"
+printf '# x\n%s\nno closing marker\n' "$memo_begin" >"$mbad/CLAUDE.md"
+expect_rejection 'unbalanced memo markers are rejected' \
+  "$hod" install --project "$mbad"
+
+mlink=$tmp_root/projects/memo-symlink
+new_memo_project "$mlink"
+printf 'outside content\n' >"$tmp_root/memo-outside.md"
+ln -s -- "$tmp_root/memo-outside.md" "$mlink/CLAUDE.md"
+expect_rejection 'symlinked memo file is rejected' \
+  "$hod" install --project "$mlink"
+expect_success 'symlink target left untouched' \
+  grep -qxF -- 'outside content' "$tmp_root/memo-outside.md"
 
 # ---------------------------------------------------------------------------
 # help / version

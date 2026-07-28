@@ -54,7 +54,7 @@ hod status
 <summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.2 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.4 sh
 ```
 
 </details>
@@ -187,19 +187,45 @@ naming Herdr and the skill.
 | Command | What it does |
 | --- | --- |
 | `hod install` | Clone/update the skill and link global adapters (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Attach one Git project instead — any location, no sibling layout required |
+| `hod install --project <path>` | Attach one Git project instead — any location, no sibling layout required. Also writes the reminder block (`--no-memo` skips it) |
 | `hod install --ref <tag>` | Pin the skill to a release tag |
 | `hod status` | ✓/✗ one-liners: prerequisites, agent CLIs, checkout, adapters, PATH. Exit 0 when healthy |
 | `hod doctor` | Everything `status` checks plus remediation commands, adapter resolution, checkout mode (branch vs pinned), integration status |
 | `hod update` | Fast-forward the skill; a pinned checkout moves to the newest tag. Refuses a dirty tree |
 | `hod settings list` | Show the role permission profiles and ready-to-paste start commands |
 | `hod settings install [--role <r>] [--force]` | Write role profiles into a project's `.claude/` |
-| `hod uninstall [--purge]` | Remove only adapters that resolve into `~/.hod/skill`; never touches foreign files |
+| `hod uninstall [--purge]` | Remove only adapters that resolve into `~/.hod/skill`, and strip the reminder block; never touches foreign files |
 
 Everything `hod` runs against Herdr is **read-only** (`herdr status`,
 `herdr integration status`). It never starts agents, never installs
 integrations, never mutates a session — that authority stays with you and the
 controller.
+
+## The reminder block
+
+Models forget mid-session that Herdr orchestration is available. A project
+install writes a few lines into `CLAUDE.md` and `AGENTS.md` — the files agent
+CLIs read on every turn — so the controller is reminded to delegate rather than
+do the work itself:
+
+```markdown
+<!-- hod:begin — managed by hod; edits inside this block are overwritten -->
+## Herdr orchestration
+...
+<!-- hod:end -->
+```
+
+The markers make it safe to re-run: only the block between them is replaced,
+everything you wrote outside is preserved byte-for-byte, and `hod uninstall
+--project` removes it again. hod refuses to touch a file with unbalanced
+markers or one that is a symlink.
+
+These files usually belong to the repository, so the block shows up in `git
+status` — **review the diff and decide whether to commit**; hod never commits.
+Skip the block entirely with `hod install --project <path> --no-memo`.
+
+The block cannot force the skill to load: activation still requires you to name
+Herdr or the skill in your request. It reminds, it does not override.
 
 ## Role profiles: rules the harness enforces
 
@@ -210,11 +236,29 @@ is a boundary the agent cannot cross, even if asked to:
 hod settings install          # writes .claude/settings.<role>.json + git-excludes them
 ```
 
-| Role | Denied | Meaning |
-| --- | --- | --- |
-| `controller` | `Edit`/`Write` + `npm` `cargo` `make` `go` `pytest` `xcodebuild` `swift` … + `git push/merge` | Plans, delegates, reads evidence. Cannot code, build, or test by hand |
-| `impl` | `git push` `merge` `reset --hard` `tag` | Writes code freely; cannot publish |
-| `reviewer` | edit tools + writing git commands + `rm` | Genuinely read-only |
+| Role | Mode | Denied | Meaning |
+| --- | --- | --- | --- |
+| `controller` | `default` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Plans and delegates. Cannot edit files, and cannot spawn in-process sub-agents that would bypass Herdr |
+| `impl` | `acceptEdits` | `git push` `merge` `reset --hard` `tag` | Writes code freely without a prompt per file; cannot publish |
+| `reviewer` | `default` | edit tools + `Agent` + writing git commands + `rm` | Genuinely read-only, and reviews with its own eyes |
+
+Denying a whole tool is airtight — the harness removes it from the model's
+context. Denying a shell prefix is not: it matches the first token only, so
+`Bash(pytest:*)` leaves `python -m pytest` open. These profiles therefore rely
+on tool denies and leave command discipline to the task prompt and the evidence
+the controller reads back.
+
+`Agent` is the rule that keeps orchestration honest. Without it a controller
+quietly falls back to its CLI's own sub-agents: no pane appears in the sidebar,
+you cannot open or answer them, and their full transcripts land in the
+controller's context until the run dies of context exhaustion.
+
+Each profile also pins its own `defaultMode`, because a `--settings` file
+outranks your `~/.claude/settings.json`. That matters if your machine uses
+`dontAsk`: that mode auto-denies every tool absent from `permissions.allow`
+**and** denies `AskUserQuestion` even when allowed — so a worker loses `Bash`
+and can no longer report itself blocked. The pane stays silent and the
+controller waits forever. Never put `dontAsk` in a role profile.
 
 ```bash
 herdr agent start impl --kind claude --pane "$p" \
@@ -363,7 +407,8 @@ herdr-orchestrator/
 hod status                         # is everything wired up?
 hod doctor                         # same, plus the fix for each problem
 hod update                         # pull the newest skill (or newest tag if pinned)
-hod install --project <path>       # attach one project
+hod install --project <path>       # attach one project (+ reminder block)
+hod install --project <path> --no-memo   # attach without touching CLAUDE.md
 hod settings install               # write role profiles into a project
 hod uninstall [--purge]            # remove hod-managed links only
 ```
