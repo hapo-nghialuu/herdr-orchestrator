@@ -103,6 +103,13 @@ hod install --project /path/to/repo   # attach one project (global already cover
 hod settings install                  # inside a project: write the three role profiles
 ```
 
+A project install also appends a short reminder block to `CLAUDE.md` and
+`AGENTS.md`, between `<!-- hod:begin -->` and `<!-- hod:end -->` markers, so the
+controller does not forget that Herdr orchestration is available. Re-running
+replaces only that block; `hod uninstall --project` removes it. Those files
+normally belong to the repository, so review the diff before committing — or
+pass `--no-memo` to skip the block entirely.
+
 ## 6. Your first orchestrated session
 
 ```bash

@@ -366,6 +366,83 @@ expect_success 'symlink target untouched' \
   test -L "$sproj/.claude/settings.reviewer.json"
 
 # ---------------------------------------------------------------------------
+# memo blocks in CLAUDE.md / AGENTS.md
+# ---------------------------------------------------------------------------
+memo_begin='<!-- hod:begin — managed by hod; edits inside this block are overwritten -->'
+
+new_memo_project() {
+  local dir=$1
+  mkdir -p -- "$dir"
+  git -C "$dir" init -q
+  git -C "$dir" config user.email "hod-test@example.com"
+  git -C "$dir" config user.name "hod-test"
+}
+
+mproj=$tmp_root/projects/memo-demo
+new_memo_project "$mproj"
+printf '# CLAUDE.md\n\nuser prose above\n' >"$mproj/CLAUDE.md"
+chmod 644 "$mproj/CLAUDE.md"
+
+expect_success 'project install writes memo blocks' \
+  "$hod" install --project "$mproj"
+
+for name in CLAUDE.md AGENTS.md; do
+  expect_success "memo block present in $name" \
+    grep -qxF -- "$memo_begin" "$mproj/$name"
+done
+
+expect_success 'memo keeps existing prose' \
+  grep -qxF -- 'user prose above' "$mproj/CLAUDE.md"
+
+expect_success 'memo preserves file mode' \
+  bash -c "test \"\$(stat -f '%Lp' '$mproj/CLAUDE.md' 2>/dev/null || stat -c '%a' '$mproj/CLAUDE.md')\" = 644"
+
+# Content the user adds after the block must survive a re-install.
+printf '\n## added later\n\nkeep me\n' >>"$mproj/CLAUDE.md"
+cp -- "$mproj/CLAUDE.md" "$tmp_root/memo-snapshot.md"
+expect_success 'memo re-install succeeds' \
+  "$hod" install --project "$mproj"
+expect_success 'memo re-install is idempotent' \
+  cmp -s "$tmp_root/memo-snapshot.md" "$mproj/CLAUDE.md"
+expect_success 'memo block is not duplicated' \
+  bash -c "test \"\$(grep -cxF -- '$memo_begin' '$mproj/CLAUDE.md')\" = 1"
+
+expect_success 'uninstall strips memo blocks' \
+  "$hod" uninstall --project "$mproj"
+expect_rejection 'memo block gone after uninstall' \
+  grep -qxF -- "$memo_begin" "$mproj/CLAUDE.md"
+expect_success 'user prose survives uninstall' \
+  grep -qxF -- 'keep me' "$mproj/CLAUDE.md"
+expect_rejection 'hod-only memo file is removed, not left empty' \
+  test -e "$mproj/AGENTS.md"
+
+# --no-memo keeps adapters but never touches the repository's own files.
+mskip=$tmp_root/projects/memo-skip
+new_memo_project "$mskip"
+expect_success 'install --no-memo succeeds' \
+  "$hod" install --project "$mskip" --no-memo
+expect_rejection 'install --no-memo writes no CLAUDE.md' \
+  test -e "$mskip/CLAUDE.md"
+expect_success 'install --no-memo still links adapters' \
+  test -L "$mskip/.claude/skills/herdr-orchestrator"
+
+# Damaged or hostile memo files must stop the install rather than be rewritten.
+mbad=$tmp_root/projects/memo-unbalanced
+new_memo_project "$mbad"
+printf '# x\n%s\nno closing marker\n' "$memo_begin" >"$mbad/CLAUDE.md"
+expect_rejection 'unbalanced memo markers are rejected' \
+  "$hod" install --project "$mbad"
+
+mlink=$tmp_root/projects/memo-symlink
+new_memo_project "$mlink"
+printf 'outside content\n' >"$tmp_root/memo-outside.md"
+ln -s -- "$tmp_root/memo-outside.md" "$mlink/CLAUDE.md"
+expect_rejection 'symlinked memo file is rejected' \
+  "$hod" install --project "$mlink"
+expect_success 'symlink target left untouched' \
+  grep -qxF -- 'outside content' "$tmp_root/memo-outside.md"
+
+# ---------------------------------------------------------------------------
 # help / version
 # ---------------------------------------------------------------------------
 expect_success 'help exits 0' "$hod" help

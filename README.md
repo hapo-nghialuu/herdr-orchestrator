@@ -187,19 +187,45 @@ naming Herdr and the skill.
 | Command | What it does |
 | --- | --- |
 | `hod install` | Clone/update the skill and link global adapters (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Attach one Git project instead — any location, no sibling layout required |
+| `hod install --project <path>` | Attach one Git project instead — any location, no sibling layout required. Also writes the reminder block (`--no-memo` skips it) |
 | `hod install --ref <tag>` | Pin the skill to a release tag |
 | `hod status` | ✓/✗ one-liners: prerequisites, agent CLIs, checkout, adapters, PATH. Exit 0 when healthy |
 | `hod doctor` | Everything `status` checks plus remediation commands, adapter resolution, checkout mode (branch vs pinned), integration status |
 | `hod update` | Fast-forward the skill; a pinned checkout moves to the newest tag. Refuses a dirty tree |
 | `hod settings list` | Show the role permission profiles and ready-to-paste start commands |
 | `hod settings install [--role <r>] [--force]` | Write role profiles into a project's `.claude/` |
-| `hod uninstall [--purge]` | Remove only adapters that resolve into `~/.hod/skill`; never touches foreign files |
+| `hod uninstall [--purge]` | Remove only adapters that resolve into `~/.hod/skill`, and strip the reminder block; never touches foreign files |
 
 Everything `hod` runs against Herdr is **read-only** (`herdr status`,
 `herdr integration status`). It never starts agents, never installs
 integrations, never mutates a session — that authority stays with you and the
 controller.
+
+## The reminder block
+
+Models forget mid-session that Herdr orchestration is available. A project
+install writes a few lines into `CLAUDE.md` and `AGENTS.md` — the files agent
+CLIs read on every turn — so the controller is reminded to delegate rather than
+do the work itself:
+
+```markdown
+<!-- hod:begin — managed by hod; edits inside this block are overwritten -->
+## Herdr orchestration
+...
+<!-- hod:end -->
+```
+
+The markers make it safe to re-run: only the block between them is replaced,
+everything you wrote outside is preserved byte-for-byte, and `hod uninstall
+--project` removes it again. hod refuses to touch a file with unbalanced
+markers or one that is a symlink.
+
+These files usually belong to the repository, so the block shows up in `git
+status` — **review the diff and decide whether to commit**; hod never commits.
+Skip the block entirely with `hod install --project <path> --no-memo`.
+
+The block cannot force the skill to load: activation still requires you to name
+Herdr or the skill in your request. It reminds, it does not override.
 
 ## Role profiles: rules the harness enforces
 
@@ -363,7 +389,8 @@ herdr-orchestrator/
 hod status                         # is everything wired up?
 hod doctor                         # same, plus the fix for each problem
 hod update                         # pull the newest skill (or newest tag if pinned)
-hod install --project <path>       # attach one project
+hod install --project <path>       # attach one project (+ reminder block)
+hod install --project <path> --no-memo   # attach without touching CLAUDE.md
 hod settings install               # write role profiles into a project
 hod uninstall [--purge]            # remove hod-managed links only
 ```

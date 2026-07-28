@@ -188,18 +188,42 @@ không phải điều phối qua Herdr; hãy nhắc lại yêu cầu kèm tên H
 | Lệnh | Tác dụng |
 | --- | --- |
 | `hod install` | Clone/cập nhật skill và tạo adapter global (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Gắn một dự án Git — vị trí bất kỳ, không cần layout sibling |
+| `hod install --project <path>` | Gắn một dự án Git — vị trí bất kỳ, không cần layout sibling. Đồng thời ghi khối nhắc (`--no-memo` để bỏ qua) |
 | `hod install --ref <tag>` | Ghim skill vào một tag phát hành |
 | `hod status` | Một dòng ✓/✗ cho từng mục: công cụ, agent CLI, checkout, adapter, PATH. Exit 0 khi khỏe |
 | `hod doctor` | Như `status` cộng thêm lệnh khắc phục, kiểm tra adapter, chế độ checkout (branch/pinned), trạng thái integration |
 | `hod update` | Fast-forward skill; checkout đang pin sẽ nhảy tới tag mới nhất. Từ chối khi cây có sửa đổi |
 | `hod settings list` | Liệt kê profile quyền theo vai + lệnh khởi động dán được ngay |
 | `hod settings install [--role <r>] [--force]` | Ghi profile theo vai vào `.claude/` của dự án |
-| `hod uninstall [--purge]` | Chỉ xóa adapter trỏ về `~/.hod/skill`; không bao giờ đụng file lạ |
+| `hod uninstall [--purge]` | Chỉ xóa adapter trỏ về `~/.hod/skill` và cắt khối nhắc; không bao giờ đụng file lạ |
 
 Mọi lệnh `hod` gọi tới Herdr đều **chỉ đọc** (`herdr status`,
 `herdr integration status`). Nó không bao giờ khởi động agent, không cài
 integration, không thay đổi phiên — quyền đó thuộc về bạn và controller.
+
+## Khối nhắc
+
+Model hay quên giữa chừng rằng có Herdr để chia việc. Khi cài vào dự án, hod
+ghi vài dòng vào `CLAUDE.md` và `AGENTS.md` — file mà agent CLI đọc mỗi lượt —
+để nhắc controller giao việc thay vì tự làm:
+
+```markdown
+<!-- hod:begin — managed by hod; edits inside this block are overwritten -->
+## Herdr orchestration
+...
+<!-- hod:end -->
+```
+
+Cặp mốc khiến việc chạy lại an toàn: chỉ phần giữa 2 mốc bị thay, mọi thứ bạn
+viết bên ngoài giữ nguyên từng byte, và `hod uninstall --project` cắt khối đó
+đi. hod từ chối động vào file có mốc lệch hoặc file là symlink.
+
+Hai file này thường thuộc về repo nên khối nhắc sẽ hiện trong `git status` —
+**xem diff rồi tự quyết có commit hay không**; hod không bao giờ commit. Muốn
+bỏ hẳn thì dùng `hod install --project <path> --no-memo`.
+
+Khối nhắc **không** ép skill chạy: muốn kích hoạt vẫn phải gọi tên Herdr hoặc
+tên skill trong lời nhờ. Nó nhắc, không ghi đè.
 
 ## Profile theo vai: luật do harness cưỡng chế
 
@@ -361,7 +385,8 @@ herdr-orchestrator/
 hod status                         # mọi thứ đã nối đúng chưa?
 hod doctor                         # như trên, kèm cách sửa từng lỗi
 hod update                         # kéo skill mới nhất (hoặc tag mới nhất nếu đang pin)
-hod install --project <path>       # gắn một dự án
+hod install --project <path>       # gắn một dự án (+ khối nhắc)
+hod install --project <path> --no-memo   # gắn mà không đụng CLAUDE.md
 hod settings install               # ghi profile theo vai vào dự án
 hod uninstall [--purge]            # chỉ gỡ link do hod quản lý
 ```
