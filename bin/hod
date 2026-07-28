@@ -367,15 +367,18 @@ install_project_adapters_absolute() {
 
 # Replace a file through a temporary sibling, keeping the original mode. mktemp
 # creates 0600, which would silently tighten a repository file's permissions.
+# GNU chmod has --reference; BSD does not, and its stat spells the mode
+# differently, so validate whatever the fallback produces before trusting it.
+# BSD chmod also rejects `--`, so no end-of-options marker here.
 replace_preserving_mode() {
   local tmp=$1 file=$2
+  local mode
 
-  if [[ -f "$file" ]]; then
-    chmod --reference="$file" -- "$tmp" 2>/dev/null || {
-      local mode
-      mode=$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file" 2>/dev/null || true)
-      [[ -n "$mode" ]] && chmod "$mode" "$tmp"
-    }
+  if [[ -f "$file" ]] && ! chmod "--reference=$file" "$tmp" 2>/dev/null; then
+    mode=$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file" 2>/dev/null || true)
+    if [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then
+      chmod "$mode" "$tmp"
+    fi
   fi
   mv -- "$tmp" "$file"
 }

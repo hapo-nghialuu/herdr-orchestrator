@@ -420,7 +420,8 @@ expect_success 'memo keeps existing prose' \
   grep -qxF -- 'user prose above' "$mproj/CLAUDE.md"
 
 expect_success 'memo preserves file mode' \
-  bash -c "test \"\$(stat -f '%Lp' '$mproj/CLAUDE.md' 2>/dev/null || stat -c '%a' '$mproj/CLAUDE.md')\" = 644"
+  python3 -c 'import os,stat,sys; sys.exit(0 if stat.S_IMODE(os.stat(sys.argv[1]).st_mode) == 0o644 else 1)' \
+    "$mproj/CLAUDE.md"
 
 # Content the user adds after the block must survive a re-install.
 printf '\n## added later\n\nkeep me\n' >>"$mproj/CLAUDE.md"
