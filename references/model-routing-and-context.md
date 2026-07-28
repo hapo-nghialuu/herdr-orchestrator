@@ -147,6 +147,36 @@ Then apply what you find:
   mention that `hod settings install` turns that role into an enforced one.
   Do not run it, and do not refuse the work over it — the user decides
   whether the softer boundary is acceptable for this task.
+
+### A permission mode that cannot ask is not viable for a worker
+
+Claude Code's `permissions.defaultMode` decides what happens to a tool call
+that would normally prompt. One value is fatal here: `dontAsk` auto-denies
+every tool that is not explicitly listed in `permissions.allow`, and it denies
+`AskUserQuestion` outright — even when that tool is allowed.
+
+A worker under `dontAsk` therefore fails twice over. Deny-only profiles lose
+`Bash` and every other unlisted tool, so the worker cannot run the commands its
+task requires. Worse, it cannot ask: the pane never reports blocked, the
+sidebar stays quiet, and the controller waits on a worker that has already
+given up. The blocked-worker path is the mechanism that lets a user answer a
+question mid-task; a mode that removes it removes the safety net.
+
+Because a `--settings` file outranks the user, project, and local settings
+files, each role profile states its own mode rather than inheriting whatever
+the machine happens to have:
+
+- **controller** and **reviewer** use `default`. Read-only work needs no
+  standing approval, and prompting still works when something unexpected
+  comes up.
+- **impl** uses `acceptEdits`, so editing and ordinary filesystem work proceed
+  without a prompt per file while riskier commands still surface.
+
+Never write `dontAsk` into a role profile, and never start a worker in a
+session configured that way. If a worker reports a denial mentioning "don't ask
+mode", that is a configuration fault, not a task failure: report it to the user
+with the mode name and the profile path rather than retrying or working around
+the denial.
 - When the user names a profile explicitly, use exactly that path. If it does
   not exist, stop and say so rather than starting the worker bare.
 - State in the final report which profile each worker started with, or that it

@@ -234,11 +234,11 @@ ranh giới agent **không thể** vượt qua, kể cả khi bị yêu cầu:
 hod settings install     # ghi .claude/settings.<vai>.json + tự thêm git exclude
 ```
 
-| Vai | Bị chặn | Ý nghĩa |
-| --- | --- | --- |
-| `controller` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Lập kế hoạch và giao việc. Không sửa file, và không spawn sub-agent nội bộ để đi đường tắt qua Herdr |
-| `impl` | `git push` `merge` `reset --hard` `tag` | Code thoải mái; không phát tán ra ngoài |
-| `reviewer` | tool sửa file + `Agent` + lệnh git ghi + `rm` | Read-only thật sự, và tự mắt mình đọc diff |
+| Vai | Chế độ | Bị chặn | Ý nghĩa |
+| --- | --- | --- | --- |
+| `controller` | `default` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Lập kế hoạch và giao việc. Không sửa file, và không spawn sub-agent nội bộ để đi đường tắt qua Herdr |
+| `impl` | `acceptEdits` | `git push` `merge` `reset --hard` `tag` | Code thoải mái, không bị hỏi từng file; không phát tán ra ngoài |
+| `reviewer` | `default` | tool sửa file + `Agent` + lệnh git ghi + `rm` | Read-only thật sự, và tự mắt mình đọc diff |
 
 Chặn cả một tool là kín tuyệt đối — harness gỡ tool khỏi context của model.
 Chặn theo tiền tố shell thì không: nó chỉ khớp token đầu tiên, nên
@@ -250,6 +250,13 @@ controller đọc lại.
 thầm quay về dùng sub-agent của chính CLI: sidebar không hiện pane nào, bạn
 không mở hay trả lời được, và toàn bộ transcript của chúng đổ vào context
 controller cho tới khi phiên chết vì hết context.
+
+Mỗi profile cũng tự khai `defaultMode`, vì file `--settings` **thắng**
+`~/.claude/settings.json` của bạn. Điều này quan trọng nếu máy bạn đang dùng
+`dontAsk`: chế độ đó tự động từ chối mọi tool không có trong
+`permissions.allow`, **và** chặn `AskUserQuestion` kể cả khi đã allow — nên
+worker mất `Bash` và không còn báo được là mình đang kẹt. Pane im lặng, còn
+controller thì chờ mãi. Đừng bao giờ để `dontAsk` trong profile theo vai.
 
 ```bash
 herdr agent start impl --kind claude --pane "$p" \

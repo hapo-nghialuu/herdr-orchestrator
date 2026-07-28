@@ -353,8 +353,19 @@ for role in controller reviewer; do
       "$sproj/.claude/settings.$role.json"
 done
 
-# Shell-prefix denies match the first token only, so they promise more than they
-# deliver. Keep the controller profile built on tool denies.
+# Every profile pins its own defaultMode. A --settings file outranks the user's
+# settings.json, so a machine configured with dontAsk would otherwise auto-deny
+# unlisted tools and block AskUserQuestion, stranding the worker.
+expect_success 'controller profile uses default mode' \
+  bash -c "test \"\$(jq -r '.permissions.defaultMode' '$sproj/.claude/settings.controller.json')\" = default"
+expect_success 'reviewer profile uses default mode' \
+  bash -c "test \"\$(jq -r '.permissions.defaultMode' '$sproj/.claude/settings.reviewer.json')\" = default"
+expect_success 'impl profile uses acceptEdits mode' \
+  bash -c "test \"\$(jq -r '.permissions.defaultMode' '$sproj/.claude/settings.impl.json')\" = acceptEdits"
+expect_rejection 'no profile ships dontAsk mode' \
+  grep -rq 'dontAsk' "$sproj/.claude/"
+
+
 expect_rejection 'controller profile has no build-tool prefix denies' \
   grep -qE '"Bash\((npm|pnpm|yarn|npx|cargo|make|go |pytest|xcodebuild|swift)' \
     "$sproj/.claude/settings.controller.json"

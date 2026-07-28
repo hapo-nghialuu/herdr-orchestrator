@@ -236,11 +236,11 @@ is a boundary the agent cannot cross, even if asked to:
 hod settings install          # writes .claude/settings.<role>.json + git-excludes them
 ```
 
-| Role | Denied | Meaning |
-| --- | --- | --- |
-| `controller` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Plans and delegates. Cannot edit files, and cannot spawn in-process sub-agents that would bypass Herdr |
-| `impl` | `git push` `merge` `reset --hard` `tag` | Writes code freely; cannot publish |
-| `reviewer` | edit tools + `Agent` + writing git commands + `rm` | Genuinely read-only, and reviews with its own eyes |
+| Role | Mode | Denied | Meaning |
+| --- | --- | --- | --- |
+| `controller` | `default` | `Edit` `Write` `NotebookEdit` `Agent` + `git push/merge` | Plans and delegates. Cannot edit files, and cannot spawn in-process sub-agents that would bypass Herdr |
+| `impl` | `acceptEdits` | `git push` `merge` `reset --hard` `tag` | Writes code freely without a prompt per file; cannot publish |
+| `reviewer` | `default` | edit tools + `Agent` + writing git commands + `rm` | Genuinely read-only, and reviews with its own eyes |
 
 Denying a whole tool is airtight — the harness removes it from the model's
 context. Denying a shell prefix is not: it matches the first token only, so
@@ -252,6 +252,13 @@ the controller reads back.
 quietly falls back to its CLI's own sub-agents: no pane appears in the sidebar,
 you cannot open or answer them, and their full transcripts land in the
 controller's context until the run dies of context exhaustion.
+
+Each profile also pins its own `defaultMode`, because a `--settings` file
+outranks your `~/.claude/settings.json`. That matters if your machine uses
+`dontAsk`: that mode auto-denies every tool absent from `permissions.allow`
+**and** denies `AskUserQuestion` even when allowed — so a worker loses `Bash`
+and can no longer report itself blocked. The pane stays silent and the
+controller waits forever. Never put `dontAsk` in a role profile.
 
 ```bash
 herdr agent start impl --kind claude --pane "$p" \
