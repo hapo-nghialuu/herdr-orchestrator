@@ -54,7 +54,7 @@ hod status
 <summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.6 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.7 sh
 ```
 
 </details>
@@ -226,9 +226,11 @@ Skip the block entirely with `hod install --project <path> --no-memo`.
 
 The block comes in two variants. The default reminds the agent to orchestrate
 when you ask for work split across agents. `--memo-strict` declares a
-**Herdr-first project**: every implementation, bug-fix, or multi-step task
-routes through Herdr workers, and the controller works directly only for
-questions or trivial edits you explicitly ask for. A plain re-install keeps
+**Herdr-first project**: inside a Herdr pane, every implementation, bug-fix,
+or multi-step task routes through Herdr workers, and the controller works
+directly only for questions or small edits you ask for. Outside a Herdr pane
+the preference never blocks work — the agent proceeds normally and just says
+once that the project prefers Herdr. A plain re-install keeps
 whichever variant the project already carries — teammates running `hod
 install --project` cannot accidentally downgrade it — and `--memo-default`
 switches back explicitly.
