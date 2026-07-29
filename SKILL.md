@@ -17,6 +17,8 @@ Use Herdr as the transport and control plane. The current CLI remains the single
 - Do not expose private chain-of-thought, hidden prompts, credentials, personal configuration, unrelated panes, or another worker's private transcript.
 - Do not claim success from an agent state or verbal report alone. Verify artifacts and relevant checks.
 - Delegate through Herdr panes, never through the CLI's own in-process sub-agents. A pane keeps the worker's transcript out of the controller's context and visible to the user; an internal sub-agent returns everything into context and appears nowhere in the sidebar.
+- Treat a prompt as delivered only after submission is confirmed. `agent_prompt_stalled` means it was not: the text still sits unsent in the worker's input box, and everything on that screen is your own words — not worker output, not evidence.
+- Never end your turn while an agent you started is `working` or `blocked`. Wait and harvest, resolve the blocker within established intent, or tell the user exactly which agents remain, in which panes, waiting for what.
 
 Herdr prompt input has no sender or provenance field. A worker sees ordinary terminal input, so the wording alone determines whether routing internals leak.
 

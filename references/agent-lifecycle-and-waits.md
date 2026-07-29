@@ -115,7 +115,7 @@ abandon a task merely because one wait timed out.
 | `idle` or `done` | Read output, then verify requested artifacts and checks. |
 | `unknown` | Read output and run `herdr agent explain <target> --verbose`; never assume completion. |
 | timeout | Inspect `agent get` and `agent read`; do not blindly resend. |
-| `agent_prompt_stalled` | Confirm target, foreground agent, and visible input before retrying. |
+| `agent_prompt_stalled` | The prompt did not submit; see below. Nothing read after this error is worker output. |
 | `agent_not_running` | Refresh `agent list`; never guess another pane or target. |
 
 `done` is the unseen-attention form of the same ready state as `idle`. A CLI
@@ -123,6 +123,22 @@ read does not mark the work seen. Neither state proves that the task succeeded.
 Blocked detection is strict and may miss an unfamiliar prompt, so always inspect
 the final visible output. Use `agent explain` before acting on a suspicious
 classification.
+
+### A stalled prompt produced nothing
+
+Per the installed help, `agent prompt --wait` requires an observed state change
+shortly after submission; `agent_prompt_stalled` means none occurred — the
+prompt never entered the agent. Whatever the pane shows afterwards is your own
+text sitting unsent in the input box. Reading it back proves delivery failed,
+not that work happened: matching your own prompt on screen and reporting it as
+a result fabricates a completion that never ran. Recover in order:
+
+1. Confirm the target and that the agent is the pane's foreground process.
+2. Read the pane; your prompt visible in the input box confirms the stall.
+3. Submit it (`agent send-keys <target> enter`) or re-prompt.
+4. Confirm the agent actually left its pre-submission state — a settled
+   `agent wait` or a changed `agent_status` in `agent get` — before treating
+   anything on that screen as the worker's work.
 
 Keep the user informed during long waits.
 
@@ -132,6 +148,17 @@ first. A worker sitting `idle` with a finished result is not done — it is
 waiting to be harvested, and an unharvested worker is the usual reason a team
 appears stalled. Harvest each one's evidence and open questions before starting
 the next round.
+
+### Finish the roster before finishing the reply
+
+A turn that ends while an owned agent is `working` or `blocked` orphans it. A
+blocked worker's question reaches no one: the pane sits waiting for an answer
+that will not come, and the user discovers the stalled team only by opening
+panes. Before composing the final reply, run `agent list` one last time and
+settle every agent this task started — wait on the `working`, resolve or
+escalate the `blocked`. When stopping early is genuinely unavoidable, the
+report must name each remaining agent, its pane, its state, and what it is
+waiting for; a report that omits a live worker abandons it.
 
 ## Continue a live agent or start a fresh one
 
