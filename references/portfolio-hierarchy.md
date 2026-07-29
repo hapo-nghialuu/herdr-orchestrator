@@ -61,8 +61,7 @@ default `~/.herdr-orc/`:
 Track in `portfolio.md` for each project: absolute path, workspace and
 controller identifiers, current objective, status, open blockers, and the last
 verified evidence. Track in each project `ledger.md` the team ledger fields
-required by
-[Parallel worktrees and ownership](parallel-worktrees-and-ownership.md).
+required by the main skill's team-and-integration rules.
 
 Rewrite state files after every material change. A restarted orchestrator or
 controller must reconcile from state files plus `herdr workspace list` and
@@ -121,9 +120,8 @@ questions that need my decision.
 
 ## Layered verification
 
-- A controller verifies its project exactly as
-  [Verification and safety](verification-and-safety.md) requires: real diffs,
-  fresh sentinel-guarded checks, and independent read-only review for
+- A controller verifies its project exactly as the main skill requires: real
+  diffs, fresh sentinel-guarded checks, and independent read-only review for
   material changes.
 - The orchestrator never accepts a controller summary bare: read the
   controller's evidence, spot-check the project with read-only commands
