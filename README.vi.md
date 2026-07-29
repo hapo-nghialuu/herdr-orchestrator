@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.4 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.5 sh
 ```
 
 </details>
@@ -276,7 +276,7 @@ Hai luật được chứng minh bằng test thật, không phải lý thuyết:
 Profile chỉ chứa ranh giới quyền — không bao giờ chứa credential. Claude Code
 gộp profile lên các settings đã nạp sẵn, nên token, endpoint và hooks được kế
 thừa nguyên vẹn. (Codex và Grok cưỡng chế vai bằng cờ riêng — sandbox/approval
-và allow/deny; xem [reference routing](references/model-routing-and-context.md).)
+và allow/deny; xem bảng vai trò trong [`SKILL.md`](SKILL.md).)
 
 ## Skill cam kết những gì
 
@@ -297,17 +297,13 @@ Bản contract mà controller vận hành theo, cô đọng lại:
 - **Dọn dẹp bảo thủ** — pane và worktree do task tạo được giữ lại cho bạn
   kiểm tra, tới khi bạn cho phép xóa.
 
-Toàn bộ luật vận hành nằm trong [`SKILL.md`](SKILL.md) và bảy reference chỉ
-nạp khi cần:
+Mọi luật bất biến nằm ngay trong [`SKILL.md`](SKILL.md) — nạp trọn vẹn mỗi khi
+skill kích hoạt — cộng ba reference chỉ nạp khi cần:
 
 | Reference | Nội dung |
 | --- | --- |
-| [Delegation & direct-user contract](references/delegation-and-direct-user-contract.md) | Giọng prompt, thẩm quyền, chế độ coordinator-only, thu hoạch câu hỏi |
-| [Agent lifecycle & waits](references/agent-lifecycle-and-waits.md) | Start/prompt/wait/read, bảng trạng thái, sentinel, tiếp nối vs session mới |
-| [Model routing & context](references/model-routing-and-context.md) | Chọn kind/model, cờ native, cưỡng chế vai, task packet |
-| [Parallel worktrees & ownership](references/parallel-worktrees-and-ownership.md) | Cỡ đội, sở hữu file, ledger, tích hợp |
+| [Operations](references/operations.md) | Recipe lệnh, khôi phục prompt stalled, sentinel, task packet, hồi sinh session, checklist tích hợp |
 | [Portfolio hierarchy](references/portfolio-hierarchy.md) | Một orchestrator, nhiều dự án: tier, policy, state bền vững |
-| [Verification & safety](references/verification-and-safety.md) | Luật bằng chứng, ranh giới phá hủy, riêng tư, dọn dẹp |
 | [Legacy Herdr 0.7.1](references/legacy-herdr-0.7.1.md) | Đường tương thích cho bộ lệnh cũ |
 
 ## Mở rộng quy mô

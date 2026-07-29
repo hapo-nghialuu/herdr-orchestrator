@@ -143,7 +143,7 @@ Do not assume completion or send input to a guessed target.
 Herdr output waits may match text already present in a reused pane. Run each
 command with a unique sentinel and captured exit code, then wait for that exact
 sentinel. See
-[Agent lifecycle and waits](../references/agent-lifecycle-and-waits.md#guard-against-stale-pane-output).
+[Operations](../references/operations.md#sentinel-guarded-checks).
 
 ## A Claude project model is ignored
 

@@ -54,7 +54,7 @@ hod status
 <summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.4 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.5 sh
 ```
 
 </details>
@@ -278,8 +278,8 @@ Two rules proven by live testing, not theory:
 Profiles carry permission boundaries only — never credentials. Claude Code
 merges them over the settings it already loads, so tokens, endpoints, and
 hooks are inherited untouched. (Codex and Grok enforce roles through their own
-flags — sandbox/approval modes and allow/deny rules; see the
-[routing reference](references/model-routing-and-context.md).)
+flags — sandbox/approval modes and allow/deny rules; see the roles table in
+[`SKILL.md`](SKILL.md).)
 
 ## What the skill guarantees
 
@@ -300,17 +300,13 @@ The contract the controller operates under, distilled:
 - **Conservative cleanup** — panes and worktrees the task created stay
   available for your inspection until you authorize removal.
 
-Full operating rules live in [`SKILL.md`](SKILL.md) and seven focused
-references loaded only when needed:
+Every invariant lives in [`SKILL.md`](SKILL.md) itself — loaded whole whenever
+the skill activates — plus three references loaded only when needed:
 
 | Reference | Covers |
 | --- | --- |
-| [Delegation & direct-user contract](references/delegation-and-direct-user-contract.md) | Prompt voice, authority, coordinator-only mode, question harvesting |
-| [Agent lifecycle & waits](references/agent-lifecycle-and-waits.md) | Start/prompt/wait/read, state table, sentinels, continue-vs-fresh sessions |
-| [Model routing & context](references/model-routing-and-context.md) | Kind/model selection, native flags, role enforcement, task packets |
-| [Parallel worktrees & ownership](references/parallel-worktrees-and-ownership.md) | Team sizing, file ownership, ledger, integration |
+| [Operations](references/operations.md) | Command recipes, stalled-prompt recovery, sentinels, task packets, session revival, integration checklists |
 | [Portfolio hierarchy](references/portfolio-hierarchy.md) | One orchestrator, many projects: tiers, policies, persistent state |
-| [Verification & safety](references/verification-and-safety.md) | Evidence rules, destructive boundaries, privacy, cleanup |
 | [Legacy Herdr 0.7.1](references/legacy-herdr-0.7.1.md) | Compatibility path for the old command family |
 
 ## Scaling up
