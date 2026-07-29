@@ -2,13 +2,13 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.5
+HOD_VERSION=0.1.6
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 
 usage() {
   cat <<'EOF'
 Usage:
-  hod install [--project <path>] [--ref <git-ref>] [--no-memo]
+  hod install [--project <path>] [--ref <git-ref>] [--no-memo | --memo-strict | --memo-default]
   hod status
   hod doctor
   hod update
@@ -37,6 +37,12 @@ AGENTS.md, delimited by <!-- hod:begin --> / <!-- hod:end -->. Anything you
 wrote outside those markers is preserved, re-running only replaces the block,
 and uninstall removes it. Those files usually belong to the repository, so
 review the diff — hod never commits. Skip it with --no-memo.
+
+The block comes in two variants. The default reminds the agent to orchestrate
+when you ask for work split across agents; --memo-strict declares a
+Herdr-first project where every implementation task routes through Herdr
+workers. A plain re-install keeps whichever variant the project already has;
+--memo-default explicitly switches back.
 
 Settings profiles carry permission boundaries only — never credentials.
 Claude Code merges them over the project's own settings, so tokens, endpoints
@@ -90,6 +96,9 @@ resolve_paths() {
 MEMO_BEGIN='<!-- hod:begin — managed by hod; edits inside this block are overwritten -->'
 MEMO_END='<!-- hod:end -->'
 MEMO_FILES="CLAUDE.md AGENTS.md"
+# Phrase unique to the strict template; used to detect which variant a managed
+# block carries so a plain re-install preserves the project's choice.
+MEMO_STRICT_MARKER='Herdr-first project'
 
 abs_path() {
   local target=$1
@@ -384,18 +393,40 @@ replace_preserving_mode() {
 }
 
 memo_body() {
+  local variant=${1:-default}
   local template=$SKILL_DIR/templates/memo.md
 
+  [[ "$variant" == strict ]] && template=$SKILL_DIR/templates/memo-strict.md
   [[ -f "$template" ]] || fail "memo template missing: $template"
   printf '%s\n' "$MEMO_BEGIN"
   cat -- "$template"
   printf '%s\n' "$MEMO_END"
 }
 
+# Report the variant of the managed block in a file: strict, default, or none.
+# Only text between the markers counts — user prose outside them may
+# legitimately use the same words.
+managed_memo_variant() {
+  local file=$1
+
+  if [[ ! -f "$file" ]] || ! grep -qxF -- "$MEMO_BEGIN" "$file"; then
+    printf 'none\n'
+    return 0
+  fi
+  # BSD awk rejects a `--` end-of-options marker, so none is used here.
+  if awk -v b="$MEMO_BEGIN" -v e="$MEMO_END" '$0==b{f=1;next} $0==e{f=0} f' \
+      "$file" | grep -qF -- "$MEMO_STRICT_MARKER"; then
+    printf 'strict\n'
+  else
+    printf 'default\n'
+  fi
+}
+
 # Rewrite one memo file so exactly one hod-managed block is present. Content the
 # user wrote outside the markers is preserved byte-for-byte.
 write_memo_file() {
   local file=$1
+  local variant=${2:-default}
   local tmp
   local begin_seen=false end_seen=false
 
@@ -407,7 +438,7 @@ write_memo_file() {
   fi
 
   if [[ ! -f "$file" ]]; then
-    memo_body >"$file"
+    memo_body "$variant" >"$file"
     printf 'memo created: %s\n' "$file"
     return 0
   fi
@@ -426,7 +457,7 @@ write_memo_file() {
       if [[ "$line" == "$MEMO_BEGIN" ]]; then
         in_block=true
         if [[ "$replaced" == false ]]; then
-          memo_body >>"$tmp"
+          memo_body "$variant" >>"$tmp"
           replaced=true
         fi
         continue
@@ -442,7 +473,7 @@ write_memo_file() {
     cat -- "$file" >"$tmp"
     # Separate from existing prose; harmless if the file already ends blank.
     printf '\n' >>"$tmp"
-    memo_body >>"$tmp"
+    memo_body "$variant" >>"$tmp"
     printf 'memo appended: %s\n' "$file"
   fi
 
@@ -483,10 +514,17 @@ strip_memo_file() {
 
 install_project_memo() {
   local project_dir=$1
-  local name
+  local requested=${2:-}   # empty: keep whatever variant each file already has
+  local name file variant
 
   for name in $MEMO_FILES; do
-    write_memo_file "$project_dir/$name"
+    file=$project_dir/$name
+    variant=$requested
+    if [[ -z "$variant" ]]; then
+      variant=$(managed_memo_variant "$file")
+      [[ "$variant" == none ]] && variant=default
+    fi
+    write_memo_file "$file" "$variant"
   done
   printf 'memo files are yours to commit or discard; hod never commits\n'
 }
@@ -501,7 +539,7 @@ uninstall_project_memo() {
 }
 
 cmd_install() {
-  local project_path="" ref="" memo=true
+  local project_path="" ref="" memo=true memo_variant=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -517,6 +555,14 @@ cmd_install() {
         ;;
       --no-memo)
         memo=false
+        shift
+        ;;
+      --memo-strict)
+        memo_variant=strict
+        shift
+        ;;
+      --memo-default)
+        memo_variant=default
         shift
         ;;
       -h|--help)
@@ -548,10 +594,18 @@ cmd_install() {
       install_project_adapters_absolute "$project_dir"
     fi
 
+    if [[ "$memo" == false && -n "$memo_variant" ]]; then
+      usage_error "--no-memo conflicts with --memo-strict/--memo-default"
+    fi
     if [[ "$memo" == true ]]; then
-      install_project_memo "$project_dir"
+      install_project_memo "$project_dir" "$memo_variant"
     fi
   else
+    # Memo flags only make sense with --project; failing loudly beats a
+    # silent no-op the user believes took effect.
+    if [[ -n "$memo_variant" || "$memo" == false ]]; then
+      usage_error "memo options require --project"
+    fi
     install_global_adapters
   fi
 
