@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.6 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.7 sh
 ```
 
 </details>
@@ -223,9 +223,11 @@ Hai file này thường thuộc về repo nên khối nhắc sẽ hiện trong `
 bỏ hẳn thì dùng `hod install --project <path> --no-memo`.
 
 Khối nhắc có hai biến thể. Bản mặc định nhắc agent điều phối khi bạn nhờ chia
-việc cho nhiều agent. `--memo-strict` tuyên bố **dự án Herdr-first**: mọi task
-implementation, sửa bug, hay nhiều bước đều đi qua worker Herdr; controller
-chỉ làm trực tiếp khi trả lời câu hỏi hoặc bạn nói rõ là sửa vặt tại chỗ.
+việc cho nhiều agent. `--memo-strict` tuyên bố **dự án Herdr-first**: khi ở
+trong pane Herdr, mọi task implementation, sửa bug, hay nhiều bước đều đi qua
+worker Herdr; controller chỉ làm trực tiếp khi trả lời câu hỏi hoặc bạn nhờ
+sửa nhỏ tại chỗ. Ở ngoài pane Herdr, preference này không bao giờ chặn việc —
+agent cứ làm bình thường, chỉ nhắc một câu rằng dự án ưu tiên Herdr.
 Chạy lại `hod install --project` trần giữ nguyên biến thể dự án đang có —
 đồng đội không thể vô tình hạ cấp — còn `--memo-default` là cách hạ cấp
 tường minh.

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.6
+HOD_VERSION=0.1.7
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 
 usage() {
@@ -40,8 +40,9 @@ review the diff — hod never commits. Skip it with --no-memo.
 
 The block comes in two variants. The default reminds the agent to orchestrate
 when you ask for work split across agents; --memo-strict declares a
-Herdr-first project where every implementation task routes through Herdr
-workers. A plain re-install keeps whichever variant the project already has;
+Herdr-first project where, inside a Herdr pane, every implementation task
+routes through Herdr workers (outside one it is a stated preference, never a
+blocker). A plain re-install keeps whichever variant the project already has;
 --memo-default explicitly switches back.
 
 Settings profiles carry permission boundaries only — never credentials.
