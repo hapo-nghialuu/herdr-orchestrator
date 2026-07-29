@@ -468,6 +468,46 @@ expect_rejection 'symlinked memo file is rejected' \
 expect_success 'symlink target left untouched' \
   grep -qxF -- 'outside content' "$tmp_root/memo-outside.md"
 
+# Memo variants: --memo-strict writes the Herdr-first block, a plain re-install
+# preserves whichever variant the project already carries, and --memo-default
+# explicitly downgrades.
+strict_marker='Herdr-first project'
+mvar=$tmp_root/projects/memo-variant
+new_memo_project "$mvar"
+expect_success 'install --memo-strict succeeds' \
+  "$hod" install --project "$mvar" --memo-strict
+expect_success 'strict block written' \
+  grep -qF -- "$strict_marker" "$mvar/CLAUDE.md"
+expect_success 'plain re-install succeeds on a strict project' \
+  "$hod" install --project "$mvar"
+expect_success 'plain re-install keeps the strict variant' \
+  grep -qF -- "$strict_marker" "$mvar/CLAUDE.md"
+expect_success 'strict block not duplicated' \
+  bash -c "test \"\$(grep -cxF -- '$memo_begin' '$mvar/CLAUDE.md')\" = 1"
+expect_success 'install --memo-default downgrades' \
+  "$hod" install --project "$mvar" --memo-default
+expect_rejection 'strict marker gone after downgrade' \
+  grep -qF -- "$strict_marker" "$mvar/CLAUDE.md"
+
+# User prose outside the markers mentioning the strict phrase must not flip
+# the managed block's variant on a plain re-install.
+mcol=$tmp_root/projects/memo-collide
+new_memo_project "$mcol"
+expect_success 'collide: default install succeeds' \
+  "$hod" install --project "$mcol"
+printf '\n## Team note\n\nThis is a Herdr-first project by policy.\n' >>"$mcol/CLAUDE.md"
+expect_success 'collide: plain re-install succeeds' \
+  "$hod" install --project "$mcol"
+expect_success 'variant detection ignores prose outside the markers' \
+  bash -c "awk -v b='$memo_begin' -v e='<!-- hod:end -->' '\$0==b{f=1;next} \$0==e{f=0} f' '$mcol/CLAUDE.md' | grep -c . >/dev/null && ! awk -v b='$memo_begin' -v e='<!-- hod:end -->' '\$0==b{f=1;next} \$0==e{f=0} f' '$mcol/CLAUDE.md' | grep -qF -- '$strict_marker'"
+expect_success 'collide: user prose survived' \
+  grep -qF -- 'by policy' "$mcol/CLAUDE.md"
+
+expect_rejection 'memo flags without --project are rejected' \
+  "$hod" install --memo-strict
+expect_rejection '--no-memo conflicts with --memo-strict' \
+  "$hod" install --project "$mvar" --no-memo --memo-strict
+
 # ---------------------------------------------------------------------------
 # help / version
 # ---------------------------------------------------------------------------

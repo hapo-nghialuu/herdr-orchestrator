@@ -81,7 +81,7 @@ state does not appear in the sidebar.
 curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
 
 # Or pin a release — recommended for teams, reproducible:
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.5 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.6 sh
 ```
 
 This clones the skill into `~/.hod/skill/`, puts the `hod` executable on
@@ -108,7 +108,9 @@ A project install also appends a short reminder block to `CLAUDE.md` and
 controller does not forget that Herdr orchestration is available. Re-running
 replaces only that block; `hod uninstall --project` removes it. Those files
 normally belong to the repository, so review the diff before committing — or
-pass `--no-memo` to skip the block entirely.
+pass `--no-memo` to skip the block entirely. For a project where every
+implementation task should route through Herdr workers, use `--memo-strict`;
+a plain re-install preserves the variant, and `--memo-default` switches back.
 
 ## 6. Your first orchestrated session
 

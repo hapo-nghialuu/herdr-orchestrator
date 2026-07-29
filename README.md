@@ -54,7 +54,7 @@ hod status
 <summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.5 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.6 sh
 ```
 
 </details>
@@ -223,6 +223,15 @@ markers or one that is a symlink.
 These files usually belong to the repository, so the block shows up in `git
 status` — **review the diff and decide whether to commit**; hod never commits.
 Skip the block entirely with `hod install --project <path> --no-memo`.
+
+The block comes in two variants. The default reminds the agent to orchestrate
+when you ask for work split across agents. `--memo-strict` declares a
+**Herdr-first project**: every implementation, bug-fix, or multi-step task
+routes through Herdr workers, and the controller works directly only for
+questions or trivial edits you explicitly ask for. A plain re-install keeps
+whichever variant the project already carries — teammates running `hod
+install --project` cannot accidentally downgrade it — and `--memo-default`
+switches back explicitly.
 
 The block cannot force the skill to load: activation still requires you to name
 Herdr or the skill in your request. It reminds, it does not override.

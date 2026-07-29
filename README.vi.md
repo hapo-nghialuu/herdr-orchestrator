@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.5 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.6 sh
 ```
 
 </details>
@@ -221,6 +221,14 @@ viết bên ngoài giữ nguyên từng byte, và `hod uninstall --project` cắ
 Hai file này thường thuộc về repo nên khối nhắc sẽ hiện trong `git status` —
 **xem diff rồi tự quyết có commit hay không**; hod không bao giờ commit. Muốn
 bỏ hẳn thì dùng `hod install --project <path> --no-memo`.
+
+Khối nhắc có hai biến thể. Bản mặc định nhắc agent điều phối khi bạn nhờ chia
+việc cho nhiều agent. `--memo-strict` tuyên bố **dự án Herdr-first**: mọi task
+implementation, sửa bug, hay nhiều bước đều đi qua worker Herdr; controller
+chỉ làm trực tiếp khi trả lời câu hỏi hoặc bạn nói rõ là sửa vặt tại chỗ.
+Chạy lại `hod install --project` trần giữ nguyên biến thể dự án đang có —
+đồng đội không thể vô tình hạ cấp — còn `--memo-default` là cách hạ cấp
+tường minh.
 
 Khối nhắc **không** ép skill chạy: muốn kích hoạt vẫn phải gọi tên Herdr hoặc
 tên skill trong lời nhờ. Nó nhắc, không ghi đè.
