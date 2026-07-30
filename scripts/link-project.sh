@@ -57,15 +57,16 @@ project_dir=$(cd -- "$project_input" && pwd -P)
 [[ "$project_dir" != "$canonical_dir" ]] || fail "canonical package is not a child project"
 [[ "$(dirname -- "$project_dir")" == "$workspace_dir" ]] || \
   fail "project must be an immediate child of $workspace_dir"
-[[ -e "$project_dir/.git" ]] || fail "project must contain a .git marker: $project_dir"
 [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
-command -v git >/dev/null 2>&1 || fail "git executable is required"
 
-git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null) || \
-  fail "project path is not a valid Git worktree: $project_dir"
-git_top=$(cd -- "$git_top" && pwd -P)
-[[ "$git_top" == "$project_dir" ]] || \
-  fail "project path must be its Git worktree root: $project_dir"
+# A project outside Git still links; only the .git/info/exclude step needs Git.
+project_is_git=false
+if git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null); then
+  git_top=$(cd -- "$git_top" && pwd -P)
+  [[ "$git_top" == "$project_dir" ]] || \
+    fail "project path must be its Git worktree root: $project_dir (use $git_top)"
+  project_is_git=true
+fi
 
 relative_target=../../../herdr-orchestrator
 codex_link=$project_dir/.agents/skills/herdr-orchestrator
@@ -141,6 +142,11 @@ exclude_entry_present() {
 add_git_excludes() {
   local exclude_file entry
 
+  if [[ "$project_is_git" != true ]]; then
+    printf 'skipped git exclude: %s is not a git worktree\n' "$project_dir"
+    return 0
+  fi
+
   exclude_file=$(resolve_exclude_file)
   mkdir -p -- "$(dirname -- "$exclude_file")"
   for entry in "${exclude_entries[@]}"; do
@@ -176,12 +182,14 @@ if [[ "$mode" == check ]]; then
     validate_adapter "$link_path" || fail "adapter is missing: $link_path"
     printf 'ok: %s -> %s\n' "$link_path" "$relative_target"
   done
-  exclude_file=$(resolve_exclude_file)
-  for entry in "${exclude_entries[@]}"; do
-    exclude_entry_present "$exclude_file" "$entry" || \
-      fail "adapter is not excluded from git (re-run install): $entry"
-    printf 'ok: excluded from git: %s\n' "$entry"
-  done
+  if [[ "$project_is_git" == true ]]; then
+    exclude_file=$(resolve_exclude_file)
+    for entry in "${exclude_entries[@]}"; do
+      exclude_entry_present "$exclude_file" "$entry" || \
+        fail "adapter is not excluded from git (re-run install): $entry"
+      printf 'ok: excluded from git: %s\n' "$entry"
+    done
+  fi
   exit 0
 fi
 

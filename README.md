@@ -187,7 +187,7 @@ naming Herdr and the skill.
 | Command | What it does |
 | --- | --- |
 | `hod install` | Clone/update the skill and link global adapters (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Attach one Git project instead — any location, no sibling layout required. Also writes the reminder block (`--no-memo` skips it) |
+| `hod install --project <path>` | Attach one project instead — any location, no sibling layout required. Git is optional; outside a repository the `.git/info/exclude` step is skipped. Also writes the reminder block (`--no-memo` skips it) |
 | `hod install --ref <tag>` | Pin the skill to a release tag |
 | `hod status` | ✓/✗ one-liners: prerequisites, agent CLIs, checkout, adapters, PATH. Exit 0 when healthy |
 | `hod doctor` | Everything `status` checks plus remediation commands, adapter resolution, checkout mode (branch vs pinned), integration status |
