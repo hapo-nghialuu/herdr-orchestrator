@@ -53,6 +53,19 @@ expect_success() {
   fi
 }
 
+expect_output_contains() {
+  local name=$1
+  local needle=$2
+  shift 2
+  local out
+  if out=$("$@" 2>&1) && printf '%s\n' "$out" | grep -qF -- "$needle"; then
+    record "$name" true
+  else
+    printf '  output: %s\n' "$out" >&2
+    record "$name" false
+  fi
+}
+
 expect_rejection() {
   local name=$1
   shift
@@ -117,17 +130,37 @@ new_project project-b
 expect_rejection 'check rejects an unlinked project' \
   "$linker" check "$workspace/project-b"
 
-# Non-Git and nested project rejection.
+# A project outside Git still links; only the git-exclude step is skipped.
 rm -rf -- "$workspace/plain-dir"
 mkdir -p -- "$workspace/plain-dir"
-expect_rejection 'install rejects a non-Git directory' \
+expect_success 'install accepts a non-Git directory' \
   "$linker" install "$workspace/plain-dir"
+expect_success 'non-git project got the codex adapter' \
+  test -L "$workspace/plain-dir/.agents/skills/herdr-orchestrator"
+expect_success 'non-git project passes check' \
+  "$linker" check "$workspace/plain-dir"
 
 new_project project-c
 mkdir -p -- "$workspace/project-c/nested"
 git -C "$workspace/project-c/nested" init -q
 expect_rejection 'install rejects a nested project' \
   "$linker" install "$workspace/project-c/nested"
+
+# linked git worktree
+wt_root=$workspace/wt-root
+wt_link=$workspace/wt-link
+mkdir -p -- "$wt_root"
+git -C "$wt_root" init -q
+git -C "$wt_root" config user.email "hod-test@example.com"
+git -C "$wt_root" config user.name "hod-test"
+git -C "$wt_root" commit -q --allow-empty -m init
+git -C "$wt_root" worktree add -q "$wt_link" -b feat
+expect_success 'install on linked git worktree' \
+  "$linker" install "$wt_link"
+[[ -L "$wt_link/.agents/skills/herdr-orchestrator" ]] || fail "codex adapter missing on worktree"
+[[ -L "$wt_link/.claude/skills/herdr-orchestrator" ]] || fail "claude adapter missing on worktree"
+grep -qxF -- .agents/skills/herdr-orchestrator "$wt_root/.git/info/exclude" || fail "agents exclude on main repo"
+grep -qxF -- .claude/skills/herdr-orchestrator "$wt_root/.git/info/exclude" || fail "claude exclude on main repo"
 
 expect_rejection 'install rejects the workspace root' \
   "$linker" install "$workspace"
@@ -162,6 +195,16 @@ expect_success 'failed install rolls back the codex adapter' \
   test ! -e "$workspace/project-f/.agents/skills/herdr-orchestrator"
 expect_success 'failed install rolls back the claude adapter' \
   test ! -e "$workspace/project-f/.claude/skills/herdr-orchestrator"
+
+# A non-git project links normally and reports the skipped exclude step.
+plain_non_git=$workspace/plain-non-git
+rm -rf -- "$plain_non_git"
+mkdir -p -- "$plain_non_git"
+expect_output_contains 'non-git install reports skipped exclude' \
+  'skipped git exclude' \
+  "$linker" install "$plain_non_git"
+expect_success 'non-git project got the claude adapter' \
+  test -L "$plain_non_git/.claude/skills/herdr-orchestrator"
 
 # Bulk linking: visits every immediate-child Git project, links clean ones,
 # and exits non-zero because the poisoned projects above still fail.

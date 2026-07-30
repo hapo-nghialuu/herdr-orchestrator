@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.7 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.8 sh
 ```
 
 </details>
@@ -188,7 +188,7 @@ không phải điều phối qua Herdr; hãy nhắc lại yêu cầu kèm tên H
 | Lệnh | Tác dụng |
 | --- | --- |
 | `hod install` | Clone/cập nhật skill và tạo adapter global (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Gắn một dự án Git — vị trí bất kỳ, không cần layout sibling. Đồng thời ghi khối nhắc (`--no-memo` để bỏ qua) |
+| `hod install --project <path>` | Gắn một dự án — vị trí bất kỳ, không cần layout sibling. Git là tuỳ chọn; ngoài repository thì bước ghi `.git/info/exclude` được bỏ qua. Đồng thời ghi khối nhắc (`--no-memo` để bỏ qua) |
 | `hod install --ref <tag>` | Ghim skill vào một tag phát hành |
 | `hod status` | Một dòng ✓/✗ cho từng mục: công cụ, agent CLI, checkout, adapter, PATH. Exit 0 khi khỏe |
 | `hod doctor` | Như `status` cộng thêm lệnh khắc phục, kiểm tra adapter, chế độ checkout (branch/pinned), trạng thái integration |
@@ -241,7 +241,7 @@ Vai trò viết trong prompt là lời khuyên. Vai trò cài thành profile quy
 ranh giới agent **không thể** vượt qua, kể cả khi bị yêu cầu:
 
 ```bash
-hod settings install     # ghi .claude/settings.<vai>.json + tự thêm git exclude
+hod settings install     # ghi .claude/settings.<vai>.json + tự thêm git exclude (nếu là repo Git)
 ```
 
 | Vai | Chế độ | Bị chặn | Ý nghĩa |

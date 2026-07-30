@@ -85,6 +85,19 @@ expect_rejection() {
   fi
 }
 
+expect_output_contains() {
+  local name=$1
+  local needle=$2
+  shift 2
+  local out
+  if out=$("$@" 2>&1) && printf '%s\n' "$out" | grep -qF -- "$needle"; then
+    record "$name" true
+  else
+    printf '  output: %s\n' "$out" >&2
+    record "$name" false
+  fi
+}
+
 expect_output_success() {
   local name=$1
   shift
@@ -199,11 +212,11 @@ expect_success 'project exclude has claude adapter entry' \
   grep -qxF -- .claude/skills/herdr-orchestrator "$project/.git/info/exclude"
 
 # ---------------------------------------------------------------------------
-# rejection of a non-git --project target
+# a non-git --project target installs, skipping only the git-exclude step
 # ---------------------------------------------------------------------------
 plain=$tmp_root/projects/not-git
 mkdir -p -- "$plain"
-expect_rejection 'project install rejects non-git directory' \
+expect_success 'project install accepts non-git directory' \
   "$hod" install --project "$plain"
 
 # ---------------------------------------------------------------------------
@@ -325,8 +338,55 @@ expect_rejection 'settings rejects unknown subcommand' \
 expect_rejection 'settings install rejects unknown role' \
   "$hod" settings install --project "$sproj" --role nope
 
-expect_rejection 'settings install rejects non-git target' \
+# A plain directory installs fine; only the git-exclude step is skipped.
+expect_success 'settings install accepts non-git target' \
   "$hod" settings install --project "$plain"
+expect_success 'settings profile written to non-git target' \
+  test -f "$plain/.claude/settings.impl.json"
+expect_output_contains 'settings install reports skipped exclude' \
+  'skipped git exclude' \
+  "$hod" settings install --project "$plain" --force
+
+# linked git worktree
+wt_root=$tmp_root/projects/wt-root
+wt_link=$tmp_root/projects/wt-link
+mkdir -p -- "$wt_root"
+git -C "$wt_root" init -q
+git -C "$wt_root" config user.email "hod-test@example.com"
+git -C "$wt_root" config user.name "hod-test"
+git -C "$wt_root" commit -q --allow-empty -m init
+git -C "$wt_root" worktree add -q "$wt_link" -b feat
+expect_success 'settings install on linked git worktree' \
+  "$hod" settings install --project "$wt_link" --role impl
+expect_success 'worktree settings file written' \
+  test -f "$wt_link/.claude/settings.impl.json"
+expect_success 'worktree exclude lands in main repo' \
+  grep -qxF -- .claude/settings.impl.json "$wt_root/.git/info/exclude"
+
+# project install on linked worktree
+expect_success 'project install on linked git worktree' \
+  "$hod" install --project "$wt_link"
+expect_success 'worktree agents adapter linked' \
+  test -L "$wt_link/.agents/skills/herdr-orchestrator"
+expect_success 'worktree agents exclude lands in main repo' \
+  grep -qxF -- .agents/skills/herdr-orchestrator "$wt_root/.git/info/exclude"
+
+# Installing from inside a non-git directory works the same as --project.
+plain_cwd=$tmp_root/projects/plain-cwd
+mkdir -p -- "$plain_cwd"
+expect_success 'settings install accepts non-git cwd' \
+  bash -c 'cd "$1" && "$2" settings install --role impl' _ "$plain_cwd" "$hod"
+expect_success 'settings profile written from non-git cwd' \
+  test -f "$plain_cwd/.claude/settings.impl.json"
+
+# Project adapters install into a plain directory; only the exclude is skipped.
+plain_proj=$tmp_root/projects/plain-proj
+mkdir -p -- "$plain_proj"
+expect_output_contains 'project install reports skipped exclude' \
+  'skipped git exclude' \
+  "$hod" install --project "$plain_proj"
+expect_success 'project adapter linked in non-git dir' \
+  test -L "$plain_proj/.agents/skills/herdr-orchestrator"
 
 expect_success 'settings install writes all roles' \
   "$hod" settings install --project "$sproj"

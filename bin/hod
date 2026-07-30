@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.7
+HOD_VERSION=0.1.8
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 
 usage() {
@@ -289,16 +289,16 @@ install_project_adapters_absolute() {
   agents_link=$project_dir/$PROJECT_ADAPTER_REL_AGENTS
   claude_link=$project_dir/$PROJECT_ADAPTER_REL_CLAUDE
 
-  [[ -e "$project_dir/.git" ]] || fail "project must contain a .git marker: $project_dir"
-  [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
-  command -v git >/dev/null 2>&1 || fail "git executable is required"
-
+  # Git is optional: outside a repository only the exclude step is skipped.
   local git_top
-  git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null) || \
-    fail "project path is not a valid Git worktree: $project_dir"
-  git_top=$(cd -- "$git_top" && pwd -P)
-  [[ "$git_top" == "$project_dir" ]] || \
-    fail "project path must be its Git worktree root: $project_dir"
+  if git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null); then
+    git_top=$(cd -- "$git_top" && pwd -P)
+    [[ "$git_top" == "$project_dir" ]] || \
+      fail "project must be at git worktree root: $project_dir (use --project $git_top)"
+    [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
+  else
+    printf 'skipped git exclude: %s is not a git worktree\n' "$project_dir" >&2
+  fi
 
   for parent_path in \
     "$project_dir/.agents" \
@@ -352,24 +352,26 @@ install_project_adapters_absolute() {
   install_one_project "$claude_link" claude
 
   # Add both adapter paths to .git/info/exclude idempotently.
-  local common_dir exclude_file entry
-  common_dir=$(git -C "$project_dir" rev-parse --git-common-dir) || \
-    fail "cannot resolve git common directory: $project_dir"
-  case $common_dir in
-    /*) ;;
-    *) common_dir=$project_dir/$common_dir ;;
-  esac
-  [[ -d "$common_dir" ]] || fail "git common directory does not exist: $common_dir"
-  common_dir=$(cd -- "$common_dir" && pwd -P)
-  exclude_file=$common_dir/info/exclude
-  mkdir -p -- "$(dirname -- "$exclude_file")"
-  for entry in "$PROJECT_ADAPTER_REL_AGENTS" "$PROJECT_ADAPTER_REL_CLAUDE"; do
-    if [[ -f "$exclude_file" ]] && grep -qxF -- "$entry" "$exclude_file"; then
-      continue
-    fi
-    printf '%s\n' "$entry" >> "$exclude_file"
-    printf 'excluded from git: %s\n' "$entry"
-  done
+  if git -C "$project_dir" rev-parse --show-toplevel >/dev/null 2>&1; then
+    local common_dir exclude_file entry
+    common_dir=$(git -C "$project_dir" rev-parse --git-common-dir) || \
+      fail "cannot resolve git common directory: $project_dir"
+    case $common_dir in
+      /*) ;;
+      *) common_dir=$project_dir/$common_dir ;;
+    esac
+    [[ -d "$common_dir" ]] || fail "git common directory does not exist: $common_dir"
+    common_dir=$(cd -- "$common_dir" && pwd -P)
+    exclude_file=$common_dir/info/exclude
+    mkdir -p -- "$(dirname -- "$exclude_file")"
+    for entry in "$PROJECT_ADAPTER_REL_AGENTS" "$PROJECT_ADAPTER_REL_CLAUDE"; do
+      if [[ -f "$exclude_file" ]] && grep -qxF -- "$entry" "$exclude_file"; then
+        continue
+      fi
+      printf '%s\n' "$entry" >> "$exclude_file"
+      printf 'excluded from git: %s\n' "$entry"
+    done
+  fi
 
   install_complete=true
   trap - EXIT
@@ -1060,16 +1062,16 @@ resolve_settings_project() {
   [[ -d "$project_path" ]] || fail "project path is not an existing directory: $project_path"
   project_dir=$(cd -- "$project_path" && pwd -P)
 
-  [[ -e "$project_dir/.git" ]] || fail "project must contain a .git marker: $project_dir"
-  [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
-  command -v git >/dev/null 2>&1 || fail "git executable is required"
-
+  # Git is optional: outside a repository only the exclude step is skipped.
   local git_top
-  git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null) || \
-    fail "project path is not a valid Git worktree: $project_dir"
-  git_top=$(cd -- "$git_top" && pwd -P)
-  [[ "$git_top" == "$project_dir" ]] || \
-    fail "project path must be its Git worktree root: $project_dir"
+  if git_top=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null); then
+    git_top=$(cd -- "$git_top" && pwd -P)
+    [[ "$git_top" == "$project_dir" ]] || \
+      fail "project must be at git worktree root: $project_dir (use --project $git_top)"
+    [[ ! -L "$project_dir/.git" ]] || fail ".git marker must not be a symlink: $project_dir/.git"
+  else
+    printf 'skipped git exclude: %s is not a git worktree\n' "$project_dir" >&2
+  fi
 
   printf '%s\n' "$project_dir"
 }
@@ -1078,6 +1080,11 @@ settings_exclude_entry() {
   local project_dir=$1
   local entry=$2
   local common_dir exclude_file
+
+  # resolve_settings_project already reported the non-git case once.
+  if ! git -C "$project_dir" rev-parse --show-toplevel >/dev/null 2>&1; then
+    return 0
+  fi
 
   common_dir=$(git -C "$project_dir" rev-parse --git-common-dir) || \
     fail "cannot resolve git common directory: $project_dir"
