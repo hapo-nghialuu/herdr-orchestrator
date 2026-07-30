@@ -18,13 +18,13 @@ Run the repository-local validation entrypoints:
 
 ```bash
 ./scripts/validate.sh
-./scripts/test-link-project.sh
+./scripts/test-hod.sh
 ```
 
 `validate.sh` checks Bash syntax, required skill frontmatter (including the
 name format and the 1024-character description limit), and local Markdown
-targets without third-party Python packages. `test-link-project.sh` runs the
-linker's behavioral tests inside a disposable temporary workspace. Both run in
+targets without third-party Python packages. `test-hod.sh` runs the CLI's
+behavioral tests inside a disposable temporary workspace. Both run in
 CI (`.github/workflows/validate.yml`) on Ubuntu and macOS for every push and
 pull request.
 
@@ -41,21 +41,6 @@ python3 -m venv .venv
 Set `SKILL_CREATOR_DIR` to the installed `skill-creator` directory documented by
 your Codex installation. The repository does not assume a machine-specific
 global skill path.
-
-For linker changes, `./scripts/test-link-project.sh` covers these behaviors in
-disposable Git repositories outside real projects:
-
-- successful `install` and `check`;
-- idempotent repeated installation, including local Git exclude entries;
-- missing adapter detection;
-- rejection of nested or non-Git projects;
-- rejection of conflicting files and unexpected symlinks;
-- correct relative target resolution;
-- rollback of partially created adapters on a failed install;
-- bulk linking across the workspace with per-project failure reporting.
-
-Extend that script alongside any linker behavior change instead of relying on
-manual runs.
 
 Do not include credentials, personal configuration, or real private repository
 content in fixtures or reports.

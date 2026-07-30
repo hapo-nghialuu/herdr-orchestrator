@@ -54,7 +54,7 @@ hod status
 <summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.8 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.9 sh
 ```
 
 </details>
@@ -187,7 +187,7 @@ naming Herdr and the skill.
 | Command | What it does |
 | --- | --- |
 | `hod install` | Clone/update the skill and link global adapters (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Attach one project instead — any location, no sibling layout required. Git is optional; outside a repository the `.git/info/exclude` step is skipped. Also writes the reminder block (`--no-memo` skips it) |
+| `hod install --project <path>` | Attach one project instead — any location, any directory name. Git is optional; outside a repository the `.git/info/exclude` step is skipped. Also writes the reminder block (`--no-memo` skips it) |
 | `hod install --ref <tag>` | Pin the skill to a release tag |
 | `hod status` | ✓/✗ one-liners: prerequisites, agent CLIs, checkout, adapters, PATH. Exit 0 when healthy |
 | `hod doctor` | Everything `status` checks plus remediation commands, adapter resolution, checkout mode (branch vs pinned), integration status |
@@ -339,10 +339,9 @@ the skill activates — plus three references loaded only when needed:
 | Guide | For |
 | --- | --- |
 | [Quickstart — four levels](docs/quickstart.md) | Start in 2 minutes; climb only when a level feels limiting |
-| [Getting started](docs/getting-started.md) | Full setup detail, including the manual sibling-workspace alternative |
+| [Getting started](docs/getting-started.md) | Full setup detail |
 | [Usage guide](docs/usage-guide.md) | Prompt recipes: pipelines, parallel teams, steering, model selection |
 | [Portfolio orchestration](docs/portfolio-orchestration.md) | Managing several projects with one orchestrator |
-| [Project layouts](docs/project-layouts.md) | Sharing with a team: sibling, meta-repo, vendored |
 | [Troubleshooting](docs/troubleshooting.md) | Adapters, preflight, capability mismatches |
 
 ## Repository structure
@@ -354,10 +353,7 @@ herdr-orchestrator/
 ├── bin/hod                     # the CLI — install, doctor, settings, update
 ├── install.sh                  # curl | sh bootstrap (HOD_REF pins a version)
 ├── scripts/
-│   ├── link-project.sh         # manual sibling-layout linker
-│   ├── link-all-projects.sh    # bulk variant
 │   ├── test-hod.sh             # 55 hermetic CLI tests
-│   ├── test-link-project.sh    # 22 linker tests
 │   └── validate.sh             # syntax + frontmatter + markdown links
 ├── templates/                  # policy template + role permission profiles
 ├── docs/                       # human guides
@@ -552,8 +548,8 @@ Things that are **structurally** prevented, not merely discouraged:
 
 Small, focused PRs welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) — in
 short: preserve the direct-user contract, back behavior claims with installed
-`--help` evidence, run `./scripts/validate.sh`, `./scripts/test-hod.sh`, and
-`./scripts/test-link-project.sh` before pushing. Security reports go through
+`--help` evidence, run `./scripts/validate.sh` and `./scripts/test-hod.sh`
+before pushing. Security reports go through
 [SECURITY.md](SECURITY.md).
 
 ## License

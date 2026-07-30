@@ -8,12 +8,13 @@ adapters, or kill pane processes merely to test a theory.
 Confirm the adapter exists:
 
 ```bash
-./herdr-orchestrator/scripts/link-project.sh check ./project-a
+hod install --project ./project-a
+hod status
 ```
 
 Confirm you started the controller from the linked project and invoked the
 skill explicitly. Codex reads `.agents/skills`; Claude Code and Grok Build use
-the `.claude/skills` adapter in this layout.
+the `.claude/skills` adapter.
 
 ## `Herdr orchestration requires a Herdr-managed pane`
 
@@ -48,28 +49,6 @@ Do not stop or update a running Herdr session automatically. Stopping a server
 can terminate processes in its panes. Choose a maintenance window and follow
 the official Herdr update documentation.
 
-## `project must be an immediate child`
-
-Unsupported:
-
-```text
-workspace/
-├── herdr-orchestrator/
-└── projects/
-    └── project-a/
-```
-
-Supported:
-
-```text
-workspace/
-├── herdr-orchestrator/
-└── project-a/
-```
-
-Move or clone the project into the supported topology, or use a separate
-project-specific embedding strategy described in [Project layouts](project-layouts.md).
-
 ## Adapter already exists and is not a symlink
 
 The installer refuses to replace existing content. Inspect it:
@@ -82,24 +61,6 @@ ls -ld project-a/.claude/skills/herdr-orchestrator
 Decide whether the existing directory is a project-owned skill that must be
 preserved. Do not delete or overwrite it without confirming ownership and
 backup requirements.
-
-## Adapter has an unexpected target
-
-Inspect the link text and resolved destination:
-
-```bash
-readlink project-a/.agents/skills/herdr-orchestrator
-readlink project-a/.claude/skills/herdr-orchestrator
-```
-
-The sibling layout expects:
-
-```text
-../../../herdr-orchestrator
-```
-
-If the workspace was moved or renamed, restore the supported layout before
-running `install` again. The script intentionally refuses silent replacement.
 
 ## Requested worker kind is unavailable
 
