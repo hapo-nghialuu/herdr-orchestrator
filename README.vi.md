@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.8 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.9 sh
 ```
 
 </details>
@@ -188,7 +188,7 @@ không phải điều phối qua Herdr; hãy nhắc lại yêu cầu kèm tên H
 | Lệnh | Tác dụng |
 | --- | --- |
 | `hod install` | Clone/cập nhật skill và tạo adapter global (`~/.claude/skills/`, `~/.agents/skills/`) |
-| `hod install --project <path>` | Gắn một dự án — vị trí bất kỳ, không cần layout sibling. Git là tuỳ chọn; ngoài repository thì bước ghi `.git/info/exclude` được bỏ qua. Đồng thời ghi khối nhắc (`--no-memo` để bỏ qua) |
+| `hod install --project <path>` | Gắn một dự án — vị trí bất kỳ, tên thư mục bất kỳ. Git là tuỳ chọn; ngoài repository thì bước ghi `.git/info/exclude` được bỏ qua. Đồng thời ghi khối nhắc (`--no-memo` để bỏ qua) |
 | `hod install --ref <tag>` | Ghim skill vào một tag phát hành |
 | `hod status` | Một dòng ✓/✗ cho từng mục: công cụ, agent CLI, checkout, adapter, PATH. Exit 0 khi khỏe |
 | `hod doctor` | Như `status` cộng thêm lệnh khắc phục, kiểm tra adapter, chế độ checkout (branch/pinned), trạng thái integration |
@@ -334,10 +334,9 @@ skill kích hoạt — cộng ba reference chỉ nạp khi cần:
 | Tài liệu | Dành cho |
 | --- | --- |
 | [Quickstart — 4 cấp độ](docs/quickstart.md) | Bắt đầu trong 2 phút; chỉ leo cấp khi thấy chật |
-| [Getting started](docs/getting-started.md) | Chi tiết đầy đủ, gồm cả cách thủ công sibling-workspace |
+| [Getting started](docs/getting-started.md) | Chi tiết đầy đủ |
 | [Usage guide](docs/usage-guide.md) | Công thức prompt: pipeline, đội song song, điều hướng, chọn model |
 | [Portfolio orchestration](docs/portfolio-orchestration.md) | Quản nhiều dự án với một orchestrator |
-| [Project layouts](docs/project-layouts.md) | Chia sẻ cho team: sibling, meta-repo, vendored |
 | [Troubleshooting](docs/troubleshooting.md) | Adapter, preflight, lệch capability |
 
 ## Cấu trúc repo
@@ -349,10 +348,7 @@ herdr-orchestrator/
 ├── bin/hod                     # CLI — install, doctor, settings, update
 ├── install.sh                  # bootstrap curl | sh (HOD_REF để ghim version)
 ├── scripts/
-│   ├── link-project.sh         # linker thủ công kiểu sibling
-│   ├── link-all-projects.sh    # bản hàng loạt
 │   ├── test-hod.sh             # 55 test hermetic cho CLI
-│   ├── test-link-project.sh    # 22 test cho linker
 │   └── validate.sh             # syntax + frontmatter + link markdown
 ├── templates/                  # policy mẫu + profile quyền theo vai
 ├── docs/                       # tài liệu cho người
@@ -548,7 +544,7 @@ Những việc bị chặn **về mặt cấu trúc**, không chỉ là lời kh
 Hoan nghênh PR nhỏ và tập trung. Đọc [CONTRIBUTING.md](CONTRIBUTING.md) —
 tóm tắt: giữ nguyên direct-user contract, mọi khẳng định hành vi phải kèm
 bằng chứng từ `--help` đã cài, chạy `./scripts/validate.sh`,
-`./scripts/test-hod.sh`, `./scripts/test-link-project.sh` trước khi push.
+`./scripts/test-hod.sh` trước khi push.
 Báo cáo bảo mật qua [SECURITY.md](SECURITY.md).
 
 ## Giấy phép

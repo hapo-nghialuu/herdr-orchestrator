@@ -4,3 +4,15 @@
 .vscode/
 *.swp
 *.tmp
+
+.DS_Store
+.claude/
+.codex/
+.agents/
+
+# Workspace files that live alongside the repo but are not part of it.
+# claude.json holds live claude.ai session cookies — never commit it.
+claude.json
+AGENTS.md
+CLAUDE.md
+plans/

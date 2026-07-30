@@ -81,7 +81,7 @@ state does not appear in the sidebar.
 curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | sh
 
 # Or pin a release — recommended for teams, reproducible:
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.8 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.9 sh
 ```
 
 This clones the skill into `~/.hod/skill/`, puts the `hod` executable on
@@ -173,37 +173,6 @@ Detach any time with `ctrl+b` then `q`; everything keeps running. Reattach with
    anything.
 3. When something breaks, run `hod doctor` first and read
    [Troubleshooting](troubleshooting.md) — do not restart the Herdr server.
-
-## The manual alternative
-
-`hod` exists so you do not have to arrange directories. If you prefer to manage
-the checkout yourself, the original sibling-workspace linker still works: the
-canonical checkout and every linked project must be immediate children of one
-parent, and the checkout directory must be named `herdr-orchestrator` (the
-repository is named `hod`, so clone with an explicit destination).
-
-```bash
-mkdir -p ~/work/agent-workspace && cd ~/work/agent-workspace
-git clone https://github.com/hapo-nghialuu/hod.git herdr-orchestrator
-git clone <your-project-url> project-a
-
-./herdr-orchestrator/scripts/link-project.sh install ./project-a
-./herdr-orchestrator/scripts/link-project.sh check ./project-a
-```
-
-Expected check output — two adapters plus their local Git excludes:
-
-```text
-ok: .../project-a/.agents/skills/herdr-orchestrator -> ../../../herdr-orchestrator
-ok: .../project-a/.claude/skills/herdr-orchestrator -> ../../../herdr-orchestrator
-ok: excluded from git: .agents/skills/herdr-orchestrator
-ok: excluded from git: .claude/skills/herdr-orchestrator
-```
-
-The linker is idempotent and refuses to replace an existing non-symlink skill
-or follow an unsafe parent symlink. `./scripts/link-all-projects.sh install`
-does the same for every sibling project at once. See
-[Project layouts](project-layouts.md) for team-sharing variants.
 
 ## Verifying the environment by hand
 

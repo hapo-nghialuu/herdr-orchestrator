@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.8
+HOD_VERSION=0.1.9
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 
 usage() {
@@ -262,21 +262,6 @@ install_global_adapters() {
   trap - EXIT
 }
 
-project_is_sibling_of_canonical() {
-  local project_dir=$1
-  local workspace sibling linker
-
-  workspace=$(dirname -- "$project_dir")
-  sibling=$workspace/herdr-orchestrator
-  linker=$sibling/scripts/link-project.sh
-
-  [[ -d "$sibling" ]] || return 1
-  [[ -f "$linker" ]] || return 1
-  [[ -x "$linker" || -f "$linker" ]] || return 1
-  [[ "$(basename -- "$sibling")" == herdr-orchestrator ]] || return 1
-  [[ "$(dirname -- "$project_dir")" == "$(cd -- "$workspace" && pwd -P)" ]] || \
-    [[ "$(dirname -- "$project_dir")" == "$workspace" ]]
-}
 
 install_project_adapters_absolute() {
   local project_dir=$1
@@ -586,16 +571,8 @@ cmd_install() {
     local project_dir
     project_dir=$(cd -- "$project_path" && pwd -P)
 
-    if project_is_sibling_of_canonical "$project_dir"; then
-      local workspace linker
-      workspace=$(dirname -- "$project_dir")
-      linker=$workspace/herdr-orchestrator/scripts/link-project.sh
-      printf 'using sibling link-project.sh for relative adapters\n'
-      bash -- "$linker" install "$project_dir"
-    else
-      printf 'installing absolute adapters into project: %s\n' "$project_dir"
-      install_project_adapters_absolute "$project_dir"
-    fi
+    printf 'installing absolute adapters into project: %s\n' "$project_dir"
+    install_project_adapters_absolute "$project_dir"
 
     if [[ "$memo" == false && -n "$memo_variant" ]]; then
       usage_error "--no-memo conflicts with --memo-strict/--memo-default"
