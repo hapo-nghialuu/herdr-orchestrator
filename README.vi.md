@@ -54,7 +54,7 @@ hod status
 <summary>Ghim một bản phát hành thay vì bám <code>main</code> — khuyến nghị cho team</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.9 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.10 sh
 ```
 
 </details>
@@ -193,7 +193,7 @@ không phải điều phối qua Herdr; hãy nhắc lại yêu cầu kèm tên H
 | `hod status` | Một dòng ✓/✗ cho từng mục: công cụ, agent CLI, checkout, adapter, PATH. Exit 0 khi khỏe |
 | `hod doctor` | Như `status` cộng thêm lệnh khắc phục, kiểm tra adapter, chế độ checkout (branch/pinned), trạng thái integration |
 | `hod update` | Fast-forward skill; checkout đang pin sẽ nhảy tới tag mới nhất. Từ chối khi cây có sửa đổi |
-| `hod settings list` | Liệt kê profile quyền theo vai + lệnh khởi động dán được ngay |
+| `hod settings list` | Liệt kê profile Claude, cờ Codex tương đương + lệnh khởi động dán được ngay |
 | `hod settings install [--role <r>] [--force]` | Ghi profile theo vai vào `.claude/` của dự án |
 | `hod uninstall [--purge]` | Chỉ xóa adapter trỏ về `~/.hod/skill` và cắt khối nhắc; không bao giờ đụng file lạ |
 
@@ -239,6 +239,10 @@ tên skill trong lời nhờ. Nó nhắc, không ghi đè.
 
 Vai trò viết trong prompt là lời khuyên. Vai trò cài thành profile quyền là
 ranh giới agent **không thể** vượt qua, kể cả khi bị yêu cầu:
+
+Claude cưỡng chế profile bằng file settings. Worker Codex dùng cờ sandbox và
+approval native; ánh xạ cùng các chỗ vênh trung thực nằm trong [Role
+Boundaries](references/role-boundaries.md).
 
 ```bash
 hod settings install     # ghi .claude/settings.<vai>.json + tự thêm git exclude (nếu là repo Git)

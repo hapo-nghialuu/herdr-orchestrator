@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-HOD_VERSION=0.1.9
+HOD_VERSION=0.1.10
 HOD_REPO_URL="${HOD_REPO_URL:-https://github.com/hapo-nghialuu/hod.git}"
 
 usage() {
@@ -1025,6 +1025,17 @@ cmd_settings_list() {
   printf '    -- --continue --settings .claude/settings.impl.json\n'
   printf '  herdr agent start reviewer --kind claude --pane "$pane" \\\n'
   printf '    -- --settings .claude/settings.reviewer.json   # fresh session, never --continue\n'
+  printf '\nEquivalent Codex flags (replace <abs-repo> with an absolute repo path):\n'
+  printf '  herdr agent start reviewer --kind codex --pane "$pane" \\\n'
+  printf '    -- -s read-only -c features.multi_agent=false  # fresh session\n'
+  printf '  herdr agent start controller --kind codex --pane "$pane" \\\n'
+  printf '    -- -s workspace-write --ask-for-approval never \\\n'
+  printf '    -c sandbox_workspace_write.network_access=true \\\n'
+  printf '    -c features.multi_agent=false  # read-only blocks the Herdr socket\n'
+  printf '  herdr agent start impl --kind codex --pane "$pane" \\\n'
+  printf '    -- -s workspace-write --ask-for-approval never \\\n'
+  printf '    -c sandbox_workspace_write.network_access=true \\\n'
+  printf '    -c '\''sandbox_workspace_write.writable_roots=["<abs-repo>/.git"]'\''\n'
   printf '\nNever combine a profile with --dangerously-skip-permissions: that flag\n'
   printf 'overrides every deny rule and the profile stops enforcing anything.\n'
 }

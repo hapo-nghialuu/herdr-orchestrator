@@ -54,7 +54,7 @@ hod status
 <summary>Pin a release instead of tracking <code>main</code> — recommended for teams</summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.9 sh
+curl -fsSL https://raw.githubusercontent.com/hapo-nghialuu/hod/main/install.sh | HOD_REF=v0.1.10 sh
 ```
 
 </details>
@@ -192,7 +192,7 @@ naming Herdr and the skill.
 | `hod status` | ✓/✗ one-liners: prerequisites, agent CLIs, checkout, adapters, PATH. Exit 0 when healthy |
 | `hod doctor` | Everything `status` checks plus remediation commands, adapter resolution, checkout mode (branch vs pinned), integration status |
 | `hod update` | Fast-forward the skill; a pinned checkout moves to the newest tag. Refuses a dirty tree |
-| `hod settings list` | Show the role permission profiles and ready-to-paste start commands |
+| `hod settings list` | Show Claude role profiles, equivalent Codex flags, and ready-to-paste start commands |
 | `hod settings install [--role <r>] [--force]` | Write role profiles into a project's `.claude/` |
 | `hod uninstall [--purge]` | Remove only adapters that resolve into `~/.hod/skill`, and strip the reminder block; never touches foreign files |
 
@@ -242,6 +242,10 @@ Herdr or the skill in your request. It reminds, it does not override.
 
 A role written in a prompt is advice. A role installed as a permission profile
 is a boundary the agent cannot cross, even if asked to:
+
+Claude enforces these profiles through settings files. Codex workers use native
+sandbox and approval flags; exact mappings and honest gaps live in [Role
+Boundaries](references/role-boundaries.md).
 
 ```bash
 hod settings install          # writes .claude/settings.<role>.json + git-excludes them

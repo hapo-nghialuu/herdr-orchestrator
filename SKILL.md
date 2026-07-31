@@ -72,6 +72,8 @@ Model, revived context, and role boundary are independent axes, all passed to th
 | Revive context | `--continue` / `--resume` | `codex exec resume <id>` | `--resume <id>` |
 | Role boundary | `--settings <file>` | `-s <sandbox>` `-a <policy>` | `--allow/--deny` |
 
+For exact three-role promises, CLI flags, and enforcement gaps, see [Role Boundaries](references/role-boundaries.md).
+
 - A spoken model name is a label, not an ID. Resolve the exact string from the installed CLI before starting. If the CLI rejects it, report its error verbatim and ask — never substitute, downgrade, or retry with a guess. When no model is named, omit the flag and let the CLI use its configured default.
 - A project profile (`.claude/settings.<role>.json`) only takes effect when passed at start. A worker started bare silently discards the user's configuration — treat that as a defect. Map each role to its matching profile; never invent, substitute, or author one. A boundary role (read-only reviewer, coordinator-only controller) started without a profile is enforced by wording alone — say so in the report.
 - Refuse contradictions instead of passing them: `--dangerously-skip-permissions` disables every deny rule loaded through `--settings`, and `--continue`/`--resume` on a reviewer defeats its independence. An enforced boundary is the same contract as a written one — never route around a denied tool by shelling out or handing the action to another agent.
